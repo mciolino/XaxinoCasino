@@ -40,6 +40,7 @@ class User(db.Model):
     blackjack_games = db.relationship('BlackjackGame', backref='user', lazy=True)
     responsible_gaming = db.relationship('ResponsibleGaming', backref='user', uselist=False, lazy=True)
     deposit_periods = db.relationship('DepositLimitPeriod', backref='user', lazy=True)
+    bonuses = db.relationship('Bonus', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -127,6 +128,36 @@ class DepositLimitPeriod(db.Model):
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     end_date = db.Column(db.DateTime, nullable=False)
     total_deposited = db.Column(db.Float, default=0.0)  # BTC
+    
+class Bonus(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bonus_type = db.Column(db.String(20), nullable=False)  # 'deposit', 'free_spin', 'cashback', 'welcome'
+    amount = db.Column(db.Float, nullable=False)  # Bonus amount in BTC or number of free spins
+    currency = db.Column(db.String(10), nullable=False, default='BTC')
+    wagering_requirement = db.Column(db.Float, default=0.0)  # Multiplier (e.g., 30x means bet 30x bonus amount)
+    wagered_amount = db.Column(db.Float, default=0.0)  # Amount already wagered
+    game_restrictions = db.Column(db.String(256), nullable=True)  # Comma-separated list of allowed games
+    is_active = db.Column(db.Boolean, default=True)
+    is_claimed = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class Promotion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    bonus_type = db.Column(db.String(20), nullable=False)  # 'deposit', 'free_spin', 'cashback', 'welcome'
+    bonus_amount = db.Column(db.Float, nullable=False)  # Bonus amount in BTC or number of free spins
+    currency = db.Column(db.String(10), nullable=False, default='BTC')
+    min_deposit = db.Column(db.Float, nullable=True)  # Minimum deposit to qualify
+    wagering_requirement = db.Column(db.Float, default=30.0)  # Multiplier
+    promo_code = db.Column(db.String(20), nullable=True, unique=True)
+    game_restrictions = db.Column(db.String(256), nullable=True)  # Comma-separated list of allowed games
+    is_active = db.Column(db.Boolean, default=True)
+    start_date = db.Column(db.DateTime, default=datetime.utcnow)
+    end_date = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Helper functions
 def generate_wallet_address(currency):
@@ -852,6 +883,170 @@ def profile():
     
     return render_template('profile.html', user=user, wallets=wallets, total_bets=total_bets, 
                           total_wins=total_wins, activities=activities)
+
+@app.route('/responsible-gaming', methods=['GET', 'POST'])
+def responsible_gaming():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('logout'))
+    
+    # Get or create responsible gaming settings
+    rg_settings = ResponsibleGaming.query.filter_by(user_id=user.id).first()
+    if not rg_settings:
+        rg_settings = ResponsibleGaming()
+        rg_settings.user_id = user.id
+        db.session.add(rg_settings)
+        db.session.commit()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'update_limits':
+            # Update deposit limits
+            daily_limit = float(request.form.get('daily_limit', 1.0))
+            weekly_limit = float(request.form.get('weekly_limit', 5.0))
+            monthly_limit = float(request.form.get('monthly_limit', 10.0))
+            
+            rg_settings.daily_deposit_limit = daily_limit
+            rg_settings.weekly_deposit_limit = weekly_limit
+            rg_settings.monthly_deposit_limit = monthly_limit
+            
+            db.session.commit()
+            flash('Deposit limits updated successfully', 'success')
+            
+        elif action == 'update_session':
+            # Update session reminder
+            session_reminder = int(request.form.get('session_reminder', 60))
+            rg_settings.session_reminder = session_reminder
+            
+            db.session.commit()
+            flash('Session reminder updated successfully', 'success')
+            
+        elif action == 'self_exclusion':
+            # Self-exclusion
+            exclusion_period = request.form.get('exclusion_period')
+            
+            if exclusion_period == 'permanent':
+                rg_settings.is_permanently_excluded = True
+                rg_settings.self_exclusion_until = None
+                
+                db.session.commit()
+                
+                flash('Your account has been permanently excluded. Contact support for assistance.', 'warning')
+                session.clear()
+                return redirect(url_for('home'))
+            elif exclusion_period:
+                try:
+                    days = int(exclusion_period)
+                    rg_settings.self_exclusion_until = datetime.utcnow() + timedelta(days=days)
+                    rg_settings.is_permanently_excluded = False
+                    
+                    db.session.commit()
+                    
+                    flash(f'Your account has been temporarily excluded for {days} days.', 'warning')
+                    session.clear()
+                    return redirect(url_for('home'))
+                except (ValueError, TypeError):
+                    flash('Invalid exclusion period selected', 'danger')
+    
+    # Create mock data for deposit usage
+    daily_usage = 0.25
+    weekly_usage = 3.25
+    monthly_usage = 8.5
+    
+    daily_percent = (daily_usage / rg_settings.daily_deposit_limit) * 100
+    weekly_percent = (weekly_usage / rg_settings.weekly_deposit_limit) * 100
+    monthly_percent = (monthly_usage / rg_settings.monthly_deposit_limit) * 100
+    
+    return render_template('responsible_gaming.html', 
+                          user=user, 
+                          rg_settings=rg_settings,
+                          daily_usage=daily_usage,
+                          weekly_usage=weekly_usage,
+                          monthly_usage=monthly_usage,
+                          daily_percent=daily_percent,
+                          weekly_percent=weekly_percent,
+                          monthly_percent=monthly_percent)
+
+@app.route('/bonuses')
+def bonuses():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('logout'))
+    
+    # Get the user's active bonuses
+    active_bonuses = Bonus.query.filter_by(user_id=user.id, is_active=True).all()
+    
+    # Get available promotions
+    available_promotions = Promotion.query.filter_by(is_active=True).all()
+    valid_promotions = []
+    
+    for promo in available_promotions:
+        # Check if promotion is still valid (not expired)
+        if promo.end_date is None or promo.end_date > datetime.utcnow():
+            valid_promotions.append(promo)
+    
+    return render_template('bonuses.html', 
+                          user=user, 
+                          active_bonuses=active_bonuses, 
+                          available_promotions=valid_promotions)
+
+@app.route('/claim-bonus/<int:promotion_id>', methods=['POST'])
+def claim_bonus(promotion_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('logout'))
+    
+    # Find the promotion
+    promotion = Promotion.query.get_or_404(promotion_id)
+    
+    # Check if promotion is active
+    if not promotion.is_active:
+        flash('This promotion is no longer available', 'danger')
+        return redirect(url_for('bonuses'))
+    
+    # Check if promotion is still valid (not expired)
+    if promotion.end_date and promotion.end_date < datetime.utcnow():
+        flash('This promotion has expired', 'danger')
+        return redirect(url_for('bonuses'))
+    
+    # Check if the user already has this bonus
+    existing_bonus = Bonus.query.filter_by(
+        user_id=user.id,
+        bonus_type=promotion.bonus_type,
+        is_active=True
+    ).first()
+    
+    if existing_bonus:
+        flash('You already have an active bonus of this type', 'warning')
+        return redirect(url_for('bonuses'))
+    
+    # Create the new bonus
+    new_bonus = Bonus()
+    new_bonus.user_id = user.id
+    new_bonus.bonus_type = promotion.bonus_type
+    new_bonus.amount = promotion.bonus_amount
+    new_bonus.currency = promotion.currency
+    new_bonus.wagering_requirement = promotion.wagering_requirement
+    new_bonus.game_restrictions = promotion.game_restrictions
+    new_bonus.is_active = True
+    new_bonus.is_claimed = True
+    new_bonus.expires_at = datetime.utcnow() + timedelta(days=7)  # Bonus expires in 7 days
+    
+    db.session.add(new_bonus)
+    db.session.commit()
+    
+    flash(f'You have successfully claimed the {promotion.name} bonus!', 'success')
+    return redirect(url_for('bonuses'))
 
 @app.route('/admin')
 def admin():

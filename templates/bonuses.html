@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+
+{% block title %}Bonuses & Promotions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-banner {
+        background: linear-gradient(135deg, #8e44ad, #573d7a);
+        padding: 3rem 0;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .promotion-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin-bottom: 1.5rem;
+        position: relative;
+        border: 1px solid var(--border-color);
+    }
+    
+    .promotion-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .promotion-header {
+        background: linear-gradient(135deg, var(--primary-color), #573d7a);
+        color: #fff;
+        padding: 1.25rem;
+        position: relative;
+    }
+    
+    .promotion-content {
+        padding: 1.5rem;
+    }
+    
+    .promotion-tag {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+    }
+    
+    .promotion-details {
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        align-items: center;
+        margin-right: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+    }
+    
+    .bonus-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: transform 0.3s ease;
+    }
+    
+    .bonus-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .bonus-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-wrapper {
+        margin: 1rem 0;
+    }
+    
+    .progress {
+        height: 12px;
+        border-radius: 6px;
+        background-color: var(--border-color);
+    }
+    
+    .bonus-footer {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .free-spin-count {
+        font-size: 3rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        line-height: 1;
+    }
+    
+    .free-spin-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    
+    .games-list {
+        margin-top: 0.5rem;
+    }
+    
+    .game-chip {
+        display: inline-block;
+        background-color: var(--dark-bg);
+        color: var(--text-color);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .claim-btn {
+        transition: all 0.3s ease;
+    }
+    
+    .claim-btn:hover {
+        transform: scale(1.05);
+    }
+    
+    .expiry-badge {
+        padding: 0.5rem;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    
+    .expiry-warning {
+        background-color: rgba(255, 152, 0, 0.15);
+        color: #FFA000;
+    }
+    
+    .expiry-danger {
+        background-color: rgba(244, 67, 54, 0.15);
+        color: #F44336;
+    }
+    
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 2.5rem;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-banner">
+        <div class="container">
+            <h1 class="display-4 mb-3">Bonuses & Promotions</h1>
+            <p class="lead mb-0">Boost your gameplay with exclusive casino bonuses and promotions</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <h2 class="mb-4">Available Promotions</h2>
+            
+            {% if available_promotions %}
+                <div class="row">
+                    {% for promotion in available_promotions %}
+                        <div class="col-md-6">
+                            <div class="promotion-card">
+                                <div class="promotion-header">
+                                    <h4 class="mb-1">{{ promotion.name }}</h4>
+                                    <p class="mb-0">{{ promotion.description[:50] }}{% if promotion.description|length > 50 %}...{% endif %}</p>
+                                    <div class="promotion-tag">
+                                        {% if promotion.bonus_type == 'deposit' %}
+                                            Deposit Bonus
+                                        {% elif promotion.bonus_type == 'free_spin' %}
+                                            Free Spins
+                                        {% elif promotion.bonus_type == 'cashback' %}
+                                            Cashback
+                                        {% elif promotion.bonus_type == 'welcome' %}
+                                            Welcome Bonus
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="promotion-content">
+                                    <p>{{ promotion.description }}</p>
+                                    
+                                    <div class="promotion-details">
+                                        {% if promotion.bonus_type == 'deposit' or promotion.bonus_type == 'cashback' or promotion.bonus_type == 'welcome' %}
+                                            <div class="detail-item">
+                                                <div class="detail-icon">
+                                                    <i class="fas fa-percentage"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="detail-value">{{ promotion.bonus_amount }}%</div>
+                                                    <div class="detail-label text-muted">Bonus</div>
+                                                </div>
+                                            </div>
+                                        {% elif promotion.bonus_type == 'free_spin' %}
+                                            <div class="detail-item">
+                                                <div class="detail-icon">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="detail-value">{{ promotion.bonus_amount|int }}</div>
+                                                    <div class="detail-label text-muted">Free Spins</div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if promotion.min_deposit %}
+                                            <div class="detail-item">
+                                                <div class="detail-icon">
+                                                    <i class="fas fa-coins"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="detail-value">{{ promotion.min_deposit }} {{ promotion.currency }}</div>
+                                                    <div class="detail-label text-muted">Min. Deposit</div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="detail-item">
+                                            <div class="detail-icon">
+                                                <i class="fas fa-redo"></i>
+                                            </div>
+                                            <div>
+                                                <div class="detail-value">{{ promotion.wagering_requirement }}x</div>
+                                                <div class="detail-label text-muted">Wagering</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if promotion.game_restrictions %}
+                                        <div class="games-list">
+                                            <small class="text-muted">Eligible games:</small>
+                                            {% for game in promotion.game_restrictions.split(',') %}
+                                                <span class="game-chip">{{ game }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <form action="{{ url_for('claim_bonus', promotion_id=promotion.id) }}" method="POST" class="mt-3">
+                                        <button type="submit" class="btn btn-success claim-btn w-100">
+                                            <i class="fas fa-gift me-2"></i> Claim Bonus
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <h4>No Promotions Available</h4>
+                    <p class="text-muted">Check back soon for exciting new promotions and bonuses!</p>
+                </div>
+            {% endif %}
+            
+            <h2 class="mb-4 mt-5">Your Active Bonuses</h2>
+            
+            {% if active_bonuses %}
+                {% for bonus in active_bonuses %}
+                    <div class="bonus-card">
+                        <div class="bonus-header">
+                            <h4 class="mb-0">
+                                {% if bonus.bonus_type == 'deposit' %}
+                                    Deposit Bonus
+                                {% elif bonus.bonus_type == 'free_spin' %}
+                                    Free Spins
+                                {% elif bonus.bonus_type == 'cashback' %}
+                                    Cashback Bonus
+                                {% elif bonus.bonus_type == 'welcome' %}
+                                    Welcome Bonus
+                                {% endif %}
+                            </h4>
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                        
+                        {% if bonus.bonus_type == 'free_spin' %}
+                            <div class="row align-items-center mt-3">
+                                <div class="col-md-6">
+                                    <div class="text-center">
+                                        <div class="free-spin-count">{{ bonus.amount|int }}</div>
+                                        <div class="free-spin-label">FREE SPINS REMAINING</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Wagering Requirement:</span>
+                                        <span>{{ bonus.wagering_requirement }}x</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>Expires:</span>
+                                        <span>
+                                            {% if bonus.expires_at %}
+                                                {{ bonus.expires_at.strftime('%d %b %Y') }}
+                                            {% else %}
+                                                Never
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    
+                                    {% if bonus.game_restrictions %}
+                                        <div class="games-list">
+                                            <small class="text-muted">Eligible games:</small>
+                                            {% for game in bonus.game_restrictions.split(',') %}
+                                                <span class="game-chip">{{ game }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="row align-items-center mt-3">
+                                <div class="col-md-4">
+                                    <h2 class="text-primary mb-0">
+                                        {% if bonus.bonus_type == 'deposit' or bonus.bonus_type == 'welcome' %}
+                                            {{ bonus.amount }} {{ bonus.currency }}
+                                        {% elif bonus.bonus_type == 'cashback' %}
+                                            {{ bonus.amount }}%
+                                        {% endif %}
+                                    </h2>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="progress-wrapper">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Wagering Progress:</span>
+                                            <span>{{ bonus.wagered_amount }} / {{ bonus.amount * bonus.wagering_requirement }} {{ bonus.currency }}</span>
+                                        </div>
+                                        <div class="progress">
+                                            {% set progress = (bonus.wagered_amount / (bonus.amount * bonus.wagering_requirement)) * 100 %}
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bonus-footer">
+                                <div>
+                                    {% if bonus.game_restrictions %}
+                                        <div class="games-list">
+                                            <small class="text-muted">Eligible games:</small>
+                                            {% for game in bonus.game_restrictions.split(',') %}
+                                                <span class="game-chip">{{ game }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% if bonus.expires_at %}
+                                    {% set days_left = (bonus.expires_at - now).days %}
+                                    <div>
+                                        {% if days_left <= 1 %}
+                                            <span class="expiry-badge expiry-danger">
+                                                <i class="fas fa-exclamation-circle me-1"></i> Expires in less than 24 hours
+                                            </span>
+                                        {% elif days_left <= 3 %}
+                                            <span class="expiry-badge expiry-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i> Expires in {{ days_left }} days
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                Expires on {{ bonus.expires_at.strftime('%d %b %Y') }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h4>No Active Bonuses</h4>
+                    <p class="text-muted">Claim a promotion to receive bonuses and boost your gameplay!</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Bonus Information</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Wagering Requirements Explained</h5>
+                    <p>Wagering requirements determine how many times you need to play through your bonus amount before you can withdraw any winnings.</p>
+                    
+                    <div class="alert alert-dark mb-3">
+                        <i class="fas fa-info-circle me-2"></i> Example: A bonus of 1 BTC with a 30x wagering requirement means you need to place bets totaling 30 BTC before you can withdraw.
+                    </div>
+                    
+                    <h5>Bonus Types</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Deposit Bonus:</strong> Extra funds added when you make a deposit
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Free Spins:</strong> Free plays on slot games
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Cashback:</strong> Get a percentage of your losses back
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Welcome Bonus:</strong> Special bonus for new players
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Promo Code</h4>
+                </div>
+                <div class="card-body">
+                    <p>Have a promo code? Enter it below to claim your bonus.</p>
+                    <form action="{{ url_for('bonuses') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="promoCode" class="form-label">Promo Code</label>
+                            <input type="text" class="form-control" id="promoCode" name="promo_code" placeholder="Enter your promo code">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i> Apply Code
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Terms & Conditions</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                            Bonuses expire 7 days after being claimed
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                            Only one active bonus of each type is allowed
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                            Game restrictions may apply to certain bonuses
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                            Maximum withdrawal limits may apply to bonus winnings
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-circle text-primary me-2" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                            The casino reserves the right to cancel bonuses for any reason
+                        </li>
+                    </ul>
+                    <a href="#" class="btn btn-link btn-sm text-decoration-none">View Full Terms & Conditions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+
+{% block title %}Responsible Gaming{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-banner {
+        background: linear-gradient(135deg, #3a5e71, #2c3e50);
+        padding: 3rem 0;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .limit-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .limit-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .limit-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .limit-progress {
+        height: 12px;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
+    }
+    
+    .progress {
+        background-color: var(--border-color);
+    }
+    
+    .warning-zone {
+        background-color: rgba(255, 152, 0, 0.2);
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--warning-color);
+    }
+    
+    .info-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .resource-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .resource-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .resource-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .exclusion-option {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .exclusion-option:hover {
+        background-color: var(--dark-bg);
+    }
+    
+    .exclusion-option.selected {
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-banner">
+        <div class="container">
+            <h1 class="display-4 mb-3">Responsible Gaming</h1>
+            <p class="lead mb-0">Stay in control of your gameplay with our responsible gaming tools</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Deposit Limits</h3>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">Set limits on how much you can deposit in a given time period.</p>
+                    
+                    <form action="{{ url_for('responsible_gaming') }}" method="POST">
+                        <input type="hidden" name="action" value="update_limits">
+                        
+                        <div class="limit-card">
+                            <div class="limit-title">
+                                <h4 class="mb-0">Daily Deposit Limit</h4>
+                            </div>
+                            <div class="progress limit-progress">
+                                <div class="progress-bar {{ 'bg-success' if daily_percent < 50 else ('bg-warning' if daily_percent < 80 else 'bg-danger') }}" 
+                                     role="progressbar" 
+                                     style="width: {{ daily_percent }}%" 
+                                     aria-valuenow="{{ daily_percent }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>{{ '%.2f'|format(daily_usage) }} BTC used</span>
+                                <span>{{ '%.2f'|format(rg_settings.daily_deposit_limit) }} BTC limit</span>
+                            </div>
+                            <div class="mb-3">
+                                <label for="dailyLimit" class="form-label">Update Daily Limit (BTC)</label>
+                                <input type="number" class="form-control" id="dailyLimit" name="daily_limit" 
+                                       value="{{ rg_settings.daily_deposit_limit }}" 
+                                       step="0.1" min="0.1" max="10">
+                            </div>
+                        </div>
+                        
+                        <div class="limit-card">
+                            <div class="limit-title">
+                                <h4 class="mb-0">Weekly Deposit Limit</h4>
+                            </div>
+                            <div class="progress limit-progress">
+                                <div class="progress-bar {{ 'bg-success' if weekly_percent < 50 else ('bg-warning' if weekly_percent < 80 else 'bg-danger') }}" 
+                                     role="progressbar" 
+                                     style="width: {{ weekly_percent }}%" 
+                                     aria-valuenow="{{ weekly_percent }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>{{ '%.2f'|format(weekly_usage) }} BTC used</span>
+                                <span>{{ '%.2f'|format(rg_settings.weekly_deposit_limit) }} BTC limit</span>
+                            </div>
+                            <div class="mb-3">
+                                <label for="weeklyLimit" class="form-label">Update Weekly Limit (BTC)</label>
+                                <input type="number" class="form-control" id="weeklyLimit" name="weekly_limit" 
+                                       value="{{ rg_settings.weekly_deposit_limit }}" 
+                                       step="0.5" min="0.5" max="20">
+                            </div>
+                        </div>
+                        
+                        <div class="limit-card">
+                            <div class="limit-title">
+                                <h4 class="mb-0">Monthly Deposit Limit</h4>
+                            </div>
+                            <div class="progress limit-progress">
+                                <div class="progress-bar {{ 'bg-success' if monthly_percent < 50 else ('bg-warning' if monthly_percent < 80 else 'bg-danger') }}" 
+                                     role="progressbar" 
+                                     style="width: {{ monthly_percent }}%" 
+                                     aria-valuenow="{{ monthly_percent }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>{{ '%.2f'|format(monthly_usage) }} BTC used</span>
+                                <span>{{ '%.2f'|format(rg_settings.monthly_deposit_limit) }} BTC limit</span>
+                            </div>
+                            <div class="mb-3">
+                                <label for="monthlyLimit" class="form-label">Update Monthly Limit (BTC)</label>
+                                <input type="number" class="form-control" id="monthlyLimit" name="monthly_limit" 
+                                       value="{{ rg_settings.monthly_deposit_limit }}" 
+                                       step="1" min="1" max="50">
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Update Deposit Limits</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Session Time Limit</h3>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">Set a reminder to notify you when you've been playing for a specific amount of time.</p>
+                    
+                    <form action="{{ url_for('responsible_gaming') }}" method="POST">
+                        <input type="hidden" name="action" value="update_session">
+                        
+                        <div class="mb-4">
+                            <label for="sessionReminder" class="form-label">Remind me after playing for:</label>
+                            <select class="form-select" id="sessionReminder" name="session_reminder">
+                                <option value="15" {{ 'selected' if rg_settings.session_reminder == 15 else '' }}>15 minutes</option>
+                                <option value="30" {{ 'selected' if rg_settings.session_reminder == 30 else '' }}>30 minutes</option>
+                                <option value="45" {{ 'selected' if rg_settings.session_reminder == 45 else '' }}>45 minutes</option>
+                                <option value="60" {{ 'selected' if rg_settings.session_reminder == 60 else '' }}>1 hour</option>
+                                <option value="90" {{ 'selected' if rg_settings.session_reminder == 90 else '' }}>1 hour 30 minutes</option>
+                                <option value="120" {{ 'selected' if rg_settings.session_reminder == 120 else '' }}>2 hours</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Update Session Reminder</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Self-Exclusion</h3>
+                </div>
+                <div class="card-body">
+                    <div class="warning-zone mb-4">
+                        <h4 class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i> Important Notice</h4>
+                        <p class="mb-0">Self-exclusion will immediately log you out and prevent you from accessing your account for the selected period. This action cannot be undone.</p>
+                    </div>
+                    
+                    <p>If you feel that your gambling is becoming problematic, you can choose to temporarily or permanently exclude yourself from our platform.</p>
+                    
+                    <form action="{{ url_for('responsible_gaming') }}" method="POST" id="exclusionForm">
+                        <input type="hidden" name="action" value="self_exclusion">
+                        <input type="hidden" name="exclusion_period" id="exclusionPeriod" value="">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="1">
+                                    <h5>24 Hours</h5>
+                                    <p class="mb-0 text-muted">Take a day off</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="7">
+                                    <h5>7 Days</h5>
+                                    <p class="mb-0 text-muted">Take a week break</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="30">
+                                    <h5>30 Days</h5>
+                                    <p class="mb-0 text-muted">Take a month off</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="90">
+                                    <h5>90 Days</h5>
+                                    <p class="mb-0 text-muted">Take a season off</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="180">
+                                    <h5>6 Months</h5>
+                                    <p class="mb-0 text-muted">Extended break</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="exclusion-option" data-value="permanent">
+                                    <h5>Permanent</h5>
+                                    <p class="mb-0 text-muted">Close account indefinitely</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-danger btn-lg" id="exclusionBtn" disabled>
+                                Self-Exclude Now
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="info-card mb-4">
+                <h4 class="mb-3">Your Gaming Profile</h4>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Account Status:</span>
+                    <span class="badge bg-success">Active</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Self-Exclusion:</span>
+                    <span>None</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Daily Limit:</span>
+                    <span>{{ '%.2f'|format(rg_settings.daily_deposit_limit) }} BTC</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Session Reminder:</span>
+                    <span>
+                        {% if rg_settings.session_reminder >= 60 %}
+                            {{ rg_settings.session_reminder // 60 }} hour{{ 's' if rg_settings.session_reminder >= 120 else '' }}
+                            {% if rg_settings.session_reminder % 60 > 0 %}
+                                {{ rg_settings.session_reminder % 60 }} minutes
+                            {% endif %}
+                        {% else %}
+                            {{ rg_settings.session_reminder }} minutes
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Responsible Gambling Tips</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Set a budget before you start playing
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Take regular breaks from gambling
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Don't chase losses or bet more than you can afford
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Gambling is for entertainment, not a way to make money
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Don't gamble when upset, stressed or depressed
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Support Resources</h4>
+                </div>
+                <div class="card-body">
+                    <p>If you're concerned about your gambling habits, these organizations can help:</p>
+                    
+                    <div class="resource-card">
+                        <div class="d-flex align-items-center">
+                            <div class="resource-icon">
+                                <i class="fas fa-hand-holding-heart"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="mb-1">BeGambleAware</h5>
+                                <p class="mb-2">Free, confidential help and support</p>
+                                <a href="https://www.begambleaware.org/" target="_blank" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-external-link-alt me-1"></i> Visit Website
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-card">
+                        <div class="d-flex align-items-center">
+                            <div class="resource-icon">
+                                <i class="fas fa-phone-alt"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="mb-1">GamCare</h5>
+                                <p class="mb-2">24/7 National Gambling Helpline</p>
+                                <a href="https://www.gamcare.org.uk/" target="_blank" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-external-link-alt me-1"></i> Visit Website
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-card">
+                        <div class="d-flex align-items-center">
+                            <div class="resource-icon">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="mb-1">Gambling Therapy</h5>
+                                <p class="mb-2">International support online</p>
+                                <a href="https://www.gamblingtherapy.org/" target="_blank" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-external-link-alt me-1"></i> Visit Website
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Self-Exclusion Confirmation Modal -->
+<div class="modal fade" id="exclusionModal" tabindex="-1" aria-labelledby="exclusionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exclusionModalLabel">Confirm Self-Exclusion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Warning: This action cannot be undone!
+                </div>
+                <p>Are you sure you want to exclude yourself from Xaxino Casino for <span id="exclusionPeriodText"></span>?</p>
+                <ul>
+                    <li>You will be immediately logged out</li>
+                    <li>You will not be able to log in until the exclusion period ends</li>
+                    <li>Your account details will remain secure</li>
+                </ul>
+                <div class="mb-3">
+                    <label for="confirmExclusion" class="form-label">Type "CONFIRM" to proceed</label>
+                    <input type="text" class="form-control" id="confirmExclusion">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmExclusionBtn" disabled>Confirm Self-Exclusion</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Self-exclusion option selection
+        const exclusionOptions = document.querySelectorAll('.exclusion-option');
+        const exclusionPeriodInput = document.getElementById('exclusionPeriod');
+        const exclusionBtn = document.getElementById('exclusionBtn');
+        const exclusionForm = document.getElementById('exclusionForm');
+        
+        // Modal elements
+        const exclusionModal = new bootstrap.Modal(document.getElementById('exclusionModal'));
+        const exclusionPeriodText = document.getElementById('exclusionPeriodText');
+        const confirmExclusionInput = document.getElementById('confirmExclusion');
+        const confirmExclusionBtn = document.getElementById('confirmExclusionBtn');
+        
+        // Set up exclusion options
+        exclusionOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                exclusionOptions.forEach(o => o.classList.remove('selected'));
+                
+                // Add selected class to clicked option
+                this.classList.add('selected');
+                
+                // Set value in hidden input
+                const value = this.dataset.value;
+                exclusionPeriodInput.value = value;
+                
+                // Enable submit button
+                exclusionBtn.disabled = false;
+                
+                // Set period text for modal
+                if (value === 'permanent') {
+                    exclusionPeriodText.textContent = 'permanent exclusion';
+                } else if (value === '1') {
+                    exclusionPeriodText.textContent = '24 hours';
+                } else if (value === '7') {
+                    exclusionPeriodText.textContent = '7 days';
+                } else if (value === '30') {
+                    exclusionPeriodText.textContent = '30 days';
+                } else if (value === '90') {
+                    exclusionPeriodText.textContent = '90 days';
+                } else if (value === '180') {
+                    exclusionPeriodText.textContent = '6 months';
+                }
+            });
+        });
+        
+        // Show confirmation modal when clicking self-exclude button
+        exclusionBtn.addEventListener('click', function() {
+            exclusionModal.show();
+        });
+        
+        // Confirm exclusion input validation
+        confirmExclusionInput.addEventListener('input', function() {
+            confirmExclusionBtn.disabled = this.value !== 'CONFIRM';
+        });
+        
+        // Submit form when confirmed
+        confirmExclusionBtn.addEventListener('click', function() {
+            exclusionForm.submit();
+        });
+    });
+</script>
+{% endblock %}
