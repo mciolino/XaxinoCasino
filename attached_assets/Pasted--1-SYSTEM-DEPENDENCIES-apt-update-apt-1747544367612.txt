@@ -1,0 +1,199 @@
+# ─── 1. SYSTEM DEPENDENCIES ─────────────────────────────────────────────────────
+apt update && apt install -y \
+  php php-mbstring php-xml php-bcmath php-curl php-zip \
+  unzip curl composer mysql-server solc
+
+# ─── 2. UNZIP & BASE SETUP ──────────────────────────────────────────────────────
+unzip codecanyon-9AqnPTKm-xaxino-ultimate-casino-platform.zip -d xaxino
+cd xaxino/*/
+
+composer install
+cp .env.example .env
+php artisan key:generate
+chmod -R 775 storage bootstrap/cache
+
+# ─── 3. COMPOSER PACKAGES ──────────────────────────────────────────────────────
+composer require \
+  bitwasp/bitcoin \
+  kornrunner/ethereum-offline \
+  stripe/stripe-php \
+  web3p/web3.php \
+  pragmarx/google2fa-laravel
+
+# Publish 2FA migrations/config
+php artisan vendor:publish --provider="PragmaRX\Google2FALaravel\ServiceProvider"
+
+# ─── 4. DATABASE MIGRATIONS ────────────────────────────────────────────────────
+# Create wallets table
+php artisan make:migration create_wallets_table --create=wallets
+# Create dice bets table
+php artisan make:migration create_dice_bets_table --create=dice_bets
+
+# Populate wallets migration
+cat > database/migrations/*_create_wallets_table.php << 'EOF'
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+class CreateWalletsTable extends Migration {
+    public function up() {
+        Schema::create('wallets', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('currency');
+            $table->string('address');
+            $table->string('private_key')->nullable();
+            $table->decimal('balance', 32, 16)->default(0);
+            $table->timestamps();
+        });
+    }
+    public function down() {
+        Schema::dropIfExists('wallets');
+    }
+}
+EOF
+
+# Populate dice bets migration
+cat > database/migrations/*_create_dice_bets_table.php << 'EOF'
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+class CreateDiceBetsTable extends Migration {
+    public function up() {
+        Schema::create('dice_bets', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('bet_amount', 16, 8);
+            $table->string('client_seed');
+            $table->string('server_seed');
+            $table->string('server_seed_hash');
+            $table->decimal('rolled_number', 5, 2);
+            $table->decimal('payout', 16, 8)->default(0);
+            $table->timestamps();
+        });
+    }
+    public function down() {
+        Schema::dropIfExists('dice_bets');
+    }
+}
+EOF
+
+# Run migrations + seeders
+php artisan migrate --seed
+
+# ─── 5. SOLIDITY CONTRACT & ABI ─────────────────────────────────────────────────
+mkdir -p contracts build storage/abi
+
+cat > contracts/CasinoPayout.sol << 'EOF'
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract CasinoPayout {
+    address public owner;
+    constructor() { owner = msg.sender; }
+    function payout(address payable winner, uint256 amount) external {
+        require(msg.sender == owner, "Not authorized");
+        require(address(this).balance >= amount, "Insufficient balance");
+        winner.transfer(amount);
+    }
+    receive() external payable {}
+    fallback() external payable {}
+}
+EOF
+
+# Compile and extract ABI
+solc --abi --overwrite -o build contracts/CasinoPayout.sol
+cp build/CasinoPayout.abi storage/abi/CasinoPayout.json
+
+# ─── 6. ON-CHAIN PAYOUT SERVICE ─────────────────────────────────────────────────
+mkdir -p app/Services
+
+cat > app/Services/OnChainPayoutService.php << 'EOF'
+<?php
+namespace App\Services;
+use Web3p\Web3; use Web3p\Contract; use Web3p\Utils;
+use Web3p\EthereumTx\Transaction; use Illuminate\Support\Facades\Log; use Exception;
+
+class OnChainPayoutService {
+    protected Web3 $web3; protected Contract $contract;
+    protected string $owner, $privateKey, $contractAddress;
+
+    public function __construct() {
+        $cfg = config('services.ethereum');
+        $this->web3 = new Web3($cfg['provider']);
+        $abi = json_decode(file_get_contents(storage_path('abi/CasinoPayout.json')), true);
+        $this->contract = new Contract($this->web3->provider, $abi);
+        $this->contractAddress = $cfg['contract_address'];
+        $this->owner = $cfg['owner_address'];
+        $this->privateKey = $cfg['owner_private'];
+    }
+
+    public function payout(string $winner, float $amount): string {
+        try {
+            $amountWei = Utils::toWei((string)$amount, 'ether');
+            $data = $this->contract
+                         ->at($this->contractAddress)
+                         ->getData('payout', $winner, $amountWei);
+
+            $tx = [
+                'from' => $this->owner,
+                'to'   => $this->contractAddress,
+                'data' => $data,
+            ];
+
+            // Estimate gas + buffer
+            $gasLimit = null;
+            $this->web3->eth->estimateGas($tx, function($err,$gas) use (&$gasLimit){
+                if ($err) throw new Exception($err->getMessage());
+                $gasLimit = dechex((int)hexdec($gas) * 1.2);
+            });
+            $tx['gas'] = $gasLimit;
+
+            // Nonce
+            $nonce = null;
+            $this->web3->eth->getTransactionCount($this->owner, 'pending',
+                function($err,$count) use (&$nonce){
+                    if ($err) throw new Exception($err->getMessage());
+                    $nonce = $count;
+                });
+            $tx['nonce'] = $nonce;
+
+            // Sign
+            $transaction = new Transaction([
+                'nonce'    => $tx['nonce'],
+                'gasPrice' => '0x'.dechex(20 * 1e9),
+                'gasLimit' => $tx['gas'],
+                'to'       => $tx['to'],
+                'value'    => '0x0',
+                'data'     => $tx['data'],
+            ]);
+            $signed = '0x'.$transaction->sign($this->privateKey);
+
+            // Send
+            $txHash = null;
+            $this->web3->eth->sendRawTransaction($signed,
+                function($err,$hash) use (&$txHash){
+                    if ($err) throw new Exception($err->getMessage());
+                    $txHash = $hash;
+                });
+
+            return $txHash;
+        } catch (Exception $e) {
+            Log::error('[OnChainPayout] '.$e->getMessage());
+            throw $e;
+        }
+    }
+}
+EOF
+
+# ─── 7. FINAL REMINDERS ────────────────────────────────────────────────────────
+echo "✅ Setup complete. Now:"
+echo "  • Edit config/services.php → ethereum settings"
+echo "  • Update .env with:"
+echo "      ETH_PROVIDER, ETH_CONTRACT_ADDRESS, ETH_OWNER_ADDRESS, ETH_OWNER_PRIVATE_KEY"
+echo "      DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD"
+echo "  • Seed or create an admin user for 2FA/KYC"
+echo "  • Deploy your CasinoPayout.sol contract and paste its address into .env"
+
+echo "🚀 Finally, run:"
+echo "   php artisan serve --host=0.0.0.0 --port=3000"

@@ -1,0 +1,78 @@
+Here’s a high-level implementation plan for all three items—so you can see the scope and pick where to dive in first (or confirm you’d like me to proceed in this sequence):
+
+⸻
+
+1. 🔧 Vue/React Frontend for Dice Module
+
+a. Tech Stack & Architecture
+	•	Framework: React (with Hooks + Context) or Vue 3 (Composition API)
+	•	Real-Time Updates:
+	•	WebSockets (Laravel Echo + Pusher) or
+	•	Polling via Axios every few seconds
+	•	State Management:
+	•	React: Context + useReducer (or Redux)
+	•	Vue: reactive store (Pinia or Vuex)
+
+b. Key Components
+	•	WalletBalance: displays BTC/ETH balance, auto-refresh
+	•	DiceForm: bet amount + client seed input
+	•	DiceResult: show roll, outcome, server seed hash/reveal
+	•	SeedVerifier: utility to recompute SHA256(server+client)
+
+c. API Endpoints
+	•	GET /api/wallets/{currency} → { balance }
+	•	POST /api/games/dice → { rolled, payout, server_seed_hash, server_seed }
+
+⸻
+
+2. 🎰 Prototype Slots / Blackjack Module
+
+a. Folder Structure
+
+/app/Games/Slots/
+/app/Games/Blackjack/
+  - SlotsController.php
+  - BlackjackController.php
+  - logic.php
+/resources/views/games/slots/
+/resources/views/games/blackjack/
+
+b. Core Game Logic
+	•	Slots: random reels, paylines, payouts table
+	•	Blackjack: deck shuffling, hit/stand, dealer AI, hand value, payouts
+
+c. Provably Fair Extension
+	•	Same seed-combination model as Dice
+	•	Publish server_seed_hash pre-game, reveal post-game
+
+⸻
+
+3. 📜 Smart-Contract ABI + Laravel Service for On-Chain Payouts
+
+a. Solidity Contract & ABI
+	•	CasinoPayout.sol (payout function, owner-only)
+	•	Compile → JSON ABI + bytecode
+
+b. Laravel Service Class
+
+class OnChainPayoutService {
+    protected $web3;
+    protected $contract;
+    public function __construct() { … }
+    public function payout(string $winner, float $amountEth) { … }
+    public function getGasEstimate(...){ … }
+}
+
+c. Gas Management & Error Handling
+	•	Estimate gas → add buffer
+	•	Retry logic on failure
+	•	Logging + notifications
+
+⸻
+
+Which would you like to tackle first?
+	1.	Frontend for Dice
+	2.	Prototype Slots/Blackjack
+	3.	Smart-contract ABI & Laravel payout service
+
+Or shall I simply jump in and start with #1: the Vue/React Dice frontend?

@@ -1,0 +1,235 @@
+Below is everything you need to wire up the on-chain payout feature end-to-end:
+
+⸻
+
+1. Solidity Contract & ABI
+
+Contract: contracts/CasinoPayout.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract CasinoPayout {
+    address public owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    /// @notice Pays out `amount` wei to `winner`. Only owner can call.
+    function payout(address payable winner, uint256 amount) external {
+        require(msg.sender == owner, "Not authorized");
+        require(address(this).balance >= amount, "Insufficient contract balance");
+        winner.transfer(amount);
+    }
+
+    // Allow the contract to receive ETH deposits
+    receive() external payable {}
+
+    fallback() external payable {}
+}
+
+Compile (e.g. with solc or Remix) and extract the ABI JSON. Save it to storage/abi/CasinoPayout.json. Example ABI:
+
+[
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address payable", "name": "winner", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "payout",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  { "stateMutability": "payable", "type": "receive" },
+  { "stateMutability": "payable", "type": "fallback" }
+]
+
+
+⸻
+
+2. Laravel Service Class
+
+A. Install Dependencies
+
+composer require web3p/web3.php
+composer require kornrunner/keccak
+
+B. Configuration
+
+Add to config/services.php:
+
+'ethereum' => [
+    'provider'         => env('ETH_PROVIDER'),          // e.g. https://sepolia.infura.io/v3/…
+    'contract_address' => env('ETH_CONTRACT_ADDRESS'), // deployed CasinoPayout address
+    'owner_address'    => env('ETH_OWNER_ADDRESS'),    // your payout wallet
+    'owner_private'    => env('ETH_OWNER_PRIVATE_KEY'),// never commit this
+],
+
+In your .env:
+
+ETH_PROVIDER=https://sepolia.infura.io/v3/your_project_id
+ETH_CONTRACT_ADDRESS=0xYourDeployedAddress
+ETH_OWNER_ADDRESS=0xYourWallet
+ETH_OWNER_PRIVATE_KEY=abcdef123456…   # keep secret!
+
+C. Service Class: app/Services/OnChainPayoutService.php
+
+<?php
+namespace App\Services;
+
+use Web3p\Web3;
+use Web3p\Contract;
+use Web3p\Utils;
+use Elliptic\EC;
+use kornrunner\Keccak;
+use Illuminate\Support\Facades\Log;
+use Exception;
+
+class OnChainPayoutService
+{
+    protected Web3 $web3;
+    protected Contract $contract;
+    protected string $owner;
+    protected string $privateKey;
+    protected string $contractAddress;
+
+    public function __construct()
+    {
+        $cfg = config('services.ethereum');
+        $this->web3            = new Web3($cfg['provider']);
+        $abi                  = json_decode(file_get_contents(storage_path('abi/CasinoPayout.json')), true);
+        $this->contract        = new Contract($this->web3->provider, $abi);
+        $this->contractAddress = $cfg['contract_address'];
+        $this->owner           = $cfg['owner_address'];
+        $this->privateKey      = $cfg['owner_private'];
+    }
+
+    /**
+     * Send an on-chain payout.
+     *
+     * @param string $winnerAddress Ethereum address to receive funds
+     * @param float  $amountEth     Amount in ETH
+     * @return string               Transaction hash
+     * @throws Exception
+     */
+    public function payout(string $winnerAddress, float $amountEth): string
+    {
+        try {
+            // Convert ETH to Wei
+            $amountWei = Utils::toWei((string)$amountEth, 'ether');
+
+            // Prepare tx data for `payout(address,uint256)`
+            $data = $this->contract
+                         ->at($this->contractAddress)
+                         ->getData('payout', $winnerAddress, $amountWei);
+
+            // Build raw transaction
+            $tx = [
+                'from' => $this->owner,
+                'to'   => $this->contractAddress,
+                'data' => $data,
+            ];
+
+            // 1) Estimate gas
+            $gasLimit = null;
+            $this->web3->eth->estimateGas($tx, function ($err, $gas) use (&$gasLimit) {
+                if ($err) throw new Exception($err->getMessage());
+                // add 20% buffer
+                $gasLimit = dechex((int)hexdec($gas) * 1.2);
+            });
+            $tx['gas'] = $gasLimit;
+
+            // 2) Get nonce
+            $nonce = null;
+            $this->web3->eth->getTransactionCount($this->owner, 'pending', function ($err, $count) use (&$nonce) {
+                if ($err) throw new Exception($err->getMessage());
+                $nonce = $count;
+            });
+            $tx['nonce'] = $nonce;
+
+            // 3) Sign transaction
+            $signed = $this->signTransaction($tx);
+
+            // 4) Send raw transaction
+            $txHash = null;
+            $this->web3->eth->sendRawTransaction($signed, function ($err, $hash) use (&$txHash) {
+                if ($err) throw new Exception($err->getMessage());
+                $txHash = $hash;
+            });
+
+            return $txHash;
+        } catch (Exception $e) {
+            Log::error('[OnChainPayout] '.$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * RLP-encode and sign transaction with owner private key.
+     */
+    protected function signTransaction(array $tx): string
+    {
+        // Using web3p/web3.php’s Transaction helper
+        $transaction = new \Web3p\EthereumTx\Transaction([
+            'nonce'    => $tx['nonce'],
+            'gasPrice' => '0x' . dechex(20 * 1e9), // 20 Gwei
+            'gasLimit' => $tx['gas'],
+            'to'       => $tx['to'],
+            'value'    => '0x0',
+            'data'     => $tx['data'],
+        ]);
+        $signed = '0x' . $transaction->sign($this->privateKey);
+        return $signed;
+    }
+}
+
+
+⸻
+
+3. Usage Example
+
+use App\Services\OnChainPayoutService;
+
+public function handleUserWin($userAddress, $winEth)
+{
+    $payoutSvc = app(OnChainPayoutService::class);
+    $txHash    = $payoutSvc->payout($userAddress, $winEth);
+    // record $txHash in your database for auditing
+    return $txHash;
+}
+
+
+⸻
+
+4. Error Handling & Logging
+	•	All exceptions are logged via Log::error.
+	•	You can catch exceptions at call site to retry or notify admin.
+	•	For production, consider implementing a queue job (Laravel Job) so you can retry failed payouts automatically.
+
+⸻
+
+Now you have:
+	1.	Solidity source + ABI
+	2.	Laravel service to estimate gas, sign, and send on-chain payouts
+	3.	Configuration hooks for your Infura (or other) provider
+
+Let me know if you need:
+	•	🔍 Detailed unit tests or integration tests for the payout flow
+	•	🔐 A fallback mechanism if on-chain payout fails (e.g., credit off-chain wallet)
+	•	📜 A walkthrough for verifying transactions on-chain and updating your app’s state
