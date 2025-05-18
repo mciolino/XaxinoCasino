@@ -348,8 +348,14 @@
                                 <a class="nav-link" href="{{ url_for('home') }}">Home</a>
                             </li>
                             {% if session.get('user_id') %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('dice_game') }}">Dice Game</a>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="gamesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Games
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="gamesDropdown">
+                                    <li><a class="dropdown-item" href="{{ url_for('dice_game') }}">Dice Game</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('slots_game') }}">Slot Machine</a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('wallets') }}">My Wallets</a>

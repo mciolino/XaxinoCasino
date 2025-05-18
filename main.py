@@ -276,6 +276,16 @@ def dice_game():
     
     return render_template('dice.html', wallets=wallets, recent_bets=recent_bets)
 
+@app.route('/games/slots')
+def slots_game():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    wallets = get_user_wallets()
+    recent_spins = get_recent_spins()
+    
+    return render_template('slots.html', wallets=wallets, recent_spins=recent_spins)
+
 @app.route('/games/dice/play', methods=['POST'])
 def play_dice():
     if 'user_id' not in session:
@@ -342,6 +352,84 @@ def play_dice():
         },
         'wallet_balance': wallet.balance,
         'is_win': is_win
+    })
+
+@app.route('/games/slots/spin', methods=['POST'])
+def play_slots():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    data = request.get_json()
+    bet_amount = float(data.get('bet_amount', 0))
+    client_seed = data.get('client_seed', '')
+    wallet_id = int(data.get('wallet_id', 0))
+    
+    wallet = Wallet.query.get(wallet_id)
+    
+    # Validate wallet and balance
+    if not wallet or wallet.user_id != session['user_id']:
+        return json.dumps({'error': 'Invalid wallet selected'})
+    
+    if wallet.balance < bet_amount:
+        return json.dumps({'error': 'Insufficient balance'})
+    
+    # Generate server seed and hash
+    server_seed = hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
+    server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+    
+    # Available symbols for slot machine
+    symbols = ['7', 'BAR', 'BELL', 'CHERRY', 'LEMON']
+    
+    # Generate three random symbols based on the combined seed
+    combined_seed = server_seed + client_seed
+    hash_value = hashlib.sha256(combined_seed.encode()).hexdigest()
+    
+    result_symbols = []
+    for i in range(3):
+        # Use 8 hex chars (32 bits) for each reel
+        slice_value = int(hash_value[i*8:(i+1)*8], 16)
+        symbol_index = slice_value % len(symbols)
+        result_symbols.append(symbols[symbol_index])
+    
+    # Determine win and multiplier
+    multiplier = evaluate_slot_symbols(result_symbols)
+    payout = bet_amount * multiplier
+    is_win = payout > 0
+    
+    # Create slot bet record
+    new_bet = SlotBet()
+    new_bet.user_id = session['user_id']
+    new_bet.bet_amount = bet_amount
+    new_bet.client_seed = client_seed
+    new_bet.server_seed = server_seed
+    new_bet.server_seed_hash = server_seed_hash
+    new_bet.result_symbols = ','.join(result_symbols)
+    new_bet.multiplier = multiplier
+    new_bet.payout = payout
+    new_bet.currency = wallet.currency
+    
+    # Update wallet balance
+    wallet.balance -= bet_amount
+    if is_win:
+        wallet.balance += payout
+    
+    db.session.add(new_bet)
+    db.session.commit()
+    
+    return json.dumps({
+        'id': new_bet.id,
+        'bet_amount': new_bet.bet_amount,
+        'client_seed': new_bet.client_seed,
+        'server_seed': new_bet.server_seed,
+        'server_seed_hash': new_bet.server_seed_hash,
+        'result_symbols': result_symbols,
+        'multiplier': multiplier,
+        'payout': payout,
+        'currency': wallet.currency,
+        'created_at': new_bet.created_at.strftime('%H:%M:%S'),
+        'wallet_balance': wallet.balance,
+        'is_win': is_win,
+        'hash': hash_value[:16]  # Return part of the hash for verification
     })
 
 @app.route('/kyc')
