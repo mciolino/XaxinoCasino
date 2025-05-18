@@ -971,7 +971,7 @@ def responsible_gaming():
                           weekly_percent=weekly_percent,
                           monthly_percent=monthly_percent)
 
-@app.route('/bonuses')
+@app.route('/bonuses', methods=['GET', 'POST'])
 def bonuses():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -979,6 +979,47 @@ def bonuses():
     user = User.query.get(session['user_id'])
     if not user:
         return redirect(url_for('logout'))
+    
+    # Handle promo code submission
+    if request.method == 'POST' and 'promo_code' in request.form:
+        promo_code = request.form.get('promo_code')
+        
+        # Find promotion by promo code
+        promotion = Promotion.query.filter_by(promo_code=promo_code, is_active=True).first()
+        
+        if not promotion:
+            flash('Invalid promo code. Please try again.', 'danger')
+        else:
+            # Check if promotion is still valid (not expired)
+            if promotion.end_date and promotion.end_date < datetime.utcnow():
+                flash('This promotion has expired', 'danger')
+            else:
+                # Check if user already has this type of bonus
+                existing_bonus = Bonus.query.filter_by(
+                    user_id=user.id,
+                    bonus_type=promotion.bonus_type,
+                    is_active=True
+                ).first()
+                
+                if existing_bonus:
+                    flash('You already have an active bonus of this type', 'warning')
+                else:
+                    # Create the new bonus
+                    new_bonus = Bonus()
+                    new_bonus.user_id = user.id
+                    new_bonus.bonus_type = promotion.bonus_type
+                    new_bonus.amount = promotion.bonus_amount
+                    new_bonus.currency = promotion.currency
+                    new_bonus.wagering_requirement = promotion.wagering_requirement
+                    new_bonus.game_restrictions = promotion.game_restrictions
+                    new_bonus.is_active = True
+                    new_bonus.is_claimed = True
+                    new_bonus.expires_at = datetime.utcnow() + timedelta(days=7)  # Bonus expires in 7 days
+                    
+                    db.session.add(new_bonus)
+                    db.session.commit()
+                    
+                    flash(f'You have successfully claimed the {promotion.name} bonus!', 'success')
     
     # Get the user's active bonuses
     active_bonuses = Bonus.query.filter_by(user_id=user.id, is_active=True).all()
@@ -992,10 +1033,14 @@ def bonuses():
         if promo.end_date is None or promo.end_date > datetime.utcnow():
             valid_promotions.append(promo)
     
+    # Pass the current datetime to the template for expiry calculations
+    now = datetime.utcnow()
+    
     return render_template('bonuses.html', 
                           user=user, 
                           active_bonuses=active_bonuses, 
-                          available_promotions=valid_promotions)
+                          available_promotions=valid_promotions,
+                          now=now)
 
 @app.route('/claim-bonus/<int:promotion_id>', methods=['POST'])
 def claim_bonus(promotion_id):
@@ -1087,6 +1132,58 @@ with app.app_context():
             demo_user.kyc_status = 'pending'
             demo_user.set_password('password123')
             db.session.add(demo_user)
+        
+        db.session.commit()
+        
+    # Create default promotions if none exist
+    if Promotion.query.count() == 0:
+        # Welcome Bonus
+        welcome_bonus = Promotion()
+        welcome_bonus.name = 'Welcome Bonus'
+        welcome_bonus.description = 'Get a 100% bonus on your first deposit up to 1 BTC'
+        welcome_bonus.bonus_type = 'deposit'
+        welcome_bonus.bonus_amount = 100  # 100% match
+        welcome_bonus.currency = 'BTC'
+        welcome_bonus.min_deposit = 0.01  # Minimum 0.01 BTC deposit
+        welcome_bonus.wagering_requirement = 30  # 30x wagering requirement
+        welcome_bonus.promo_code = 'WELCOME100'
+        welcome_bonus.game_restrictions = 'Slots,Dice,Blackjack'
+        welcome_bonus.is_active = True
+        welcome_bonus.start_date = datetime.utcnow()
+        welcome_bonus.end_date = datetime.utcnow() + timedelta(days=365)  # Available for 1 year
+        db.session.add(welcome_bonus)
+        
+        # Free Spins Bonus
+        free_spins = Promotion()
+        free_spins.name = 'Free Spins Friday'
+        free_spins.description = 'Get 50 free spins on Slots every Friday!'
+        free_spins.bonus_type = 'free_spin'
+        free_spins.bonus_amount = 50  # 50 free spins
+        free_spins.currency = 'BTC'
+        free_spins.min_deposit = None  # No deposit required
+        free_spins.wagering_requirement = 20  # 20x wagering requirement
+        free_spins.promo_code = 'FRIDAY50'
+        free_spins.game_restrictions = 'Slots'
+        free_spins.is_active = True
+        free_spins.start_date = datetime.utcnow()
+        free_spins.end_date = None  # Never expires
+        db.session.add(free_spins)
+        
+        # Cashback Bonus
+        cashback = Promotion()
+        cashback.name = 'Weekend Cashback'
+        cashback.description = 'Get 10% cashback on your losses during the weekend'
+        cashback.bonus_type = 'cashback'
+        cashback.bonus_amount = 10  # 10% cashback
+        cashback.currency = 'BTC'
+        cashback.min_deposit = 0.1  # Minimum 0.1 BTC in losses
+        cashback.wagering_requirement = 5  # 5x wagering requirement
+        cashback.promo_code = 'CASHBACK10'
+        cashback.game_restrictions = 'Slots,Dice,Blackjack,Roulette'
+        cashback.is_active = True
+        cashback.start_date = datetime.utcnow()
+        cashback.end_date = datetime.utcnow() + timedelta(days=90)  # Available for 3 months
+        db.session.add(cashback)
         
         db.session.commit()
 
