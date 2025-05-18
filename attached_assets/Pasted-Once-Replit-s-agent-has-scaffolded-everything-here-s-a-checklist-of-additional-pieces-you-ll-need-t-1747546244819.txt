@@ -1,0 +1,74 @@
+Once Replit’s agent has scaffolded everything, here’s a checklist of additional pieces you’ll need to supply or configure so that your casino runs end-to-end:
+
+⸻
+
+1. Environment Variables & Secrets
+
+Go to the Secrets (🔒) panel in Replit and add:
+
+Name	Description
+DB_HOST	e.g. 127.0.0.1
+DB_PORT	MySQL port, usually 3306
+DB_DATABASE	e.g. xaxino
+DB_USERNAME	e.g. root
+DB_PASSWORD	your MySQL password
+ETH_PROVIDER	Your Infura/Alchemy URL (e.g. https://.../v3/…)
+ETH_CONTRACT_ADDRESS	Deployed CasinoPayout contract address
+ETH_OWNER_ADDRESS	Your payout wallet address
+ETH_OWNER_PRIVATE_KEY	Your wallet’s private key (keep secret!)
+STRIPE_KEY	Your Stripe publishable key
+STRIPE_SECRET	Your Stripe secret key
+PAYPAL_CLIENT_ID	PayPal JS SDK client ID
+PAYPAL_SECRET	(if using server-side PayPal SDK)
+GOOGLE_ANALYTICS_ID	e.g. G-XXXXXXXXXX
+
+
+⸻
+
+2. Deploy Your Solidity Contract
+	1.	Open contracts/CasinoPayout.sol in the Replit editor.
+	2.	Compile it (Replit shell: solc --abi --bin -o build contracts/CasinoPayout.sol).
+	3.	Deploy on your target network (e.g. Sepolia, Mainnet) via Remix or a script.
+	4.	Copy the deployed address into ETH_CONTRACT_ADDRESS as above.
+
+⸻
+
+3. Database & Admin User
+	•	Migrations have run automatically.
+	•	Create an admin user (via Tinker or Seeder) and enable their 2FA/KYC flags so you can log into the dashboard.
+
+php artisan tinker
+>>> \App\Models\User::create([
+       'name'=>'Admin','email'=>'admin@example.com',
+       'password'=>bcrypt('yourPass123'),'role'=>'admin'
+    ]);
+
+
+⸻
+
+4. Frontend Build & Assets
+	•	If you chose a Vue/React frontend for the Dice module, run:
+
+cd frontend
+npm install
+npm run build
+
+	•	Ensure your Blade layouts reference the compiled assets (e.g. /frontend/dist/app.js).
+
+⸻
+
+5. Final Sanity Checks
+	1.	Run the app: bash run.sh (or via Replit “Run” button)
+	2.	Visit https://<your-repl>.username.repl.co
+	3.	Test flows:
+	•	Sign up + 2FA setup
+	•	KYC upload + admin approval
+	•	Deposit mock BTC/ETH to a test wallet record
+	•	Place a dice bet → see provably-fair roll → wallet balance update
+	•	Trigger an on-chain payout → verify Tx on Etherscan
+	•	Go through Stripe & PayPal checkout → confirm success pages
+	•	Check Google Analytics real-time dashboard
+
+⸻
+
+Once those are all green, you’ll have a fully functional, crypto-enabled, provably-fair online casino—ready for real-money or test-mode deployments. Let me know if any step needs more detail!

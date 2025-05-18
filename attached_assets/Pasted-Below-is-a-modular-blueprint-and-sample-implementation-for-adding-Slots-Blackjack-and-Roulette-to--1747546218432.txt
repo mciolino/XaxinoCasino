@@ -1,0 +1,204 @@
+Below is a modular blueprint and sample implementation for adding Slots, Blackjack, and Roulette to your Xaxino platform—each built as a plug-and-play game module with provably-fair seeds, wallet integration, and a Blade/Vue frontend scaffold.
+
+⸻
+
+📦 1. Folder Structure & Registration
+
+/app/Games/
+  ├── Slots/
+  │     ├── Controllers/SlotsController.php
+  │     ├── SlotsService.php
+  │     └── routes.php
+  ├── Blackjack/
+  │     ├── Controllers/BlackjackController.php
+  │     ├── BlackjackService.php
+  │     └── routes.php
+  └── Roulette/
+        ├── Controllers/RouletteController.php
+        ├── RouletteService.php
+        └── routes.php
+
+In config/games.php register:
+
+return [
+  'dice'      => ['name'=>'Dice','controller'=>App\Games\Dice\DiceController::class],
+  'slots'     => ['name'=>'Slots','controller'=>App\Games\Slots\Controllers\SlotsController::class],
+  'blackjack' => ['name'=>'Blackjack','controller'=>App\Games\Blackjack\Controllers\BlackjackController::class],
+  'roulette'  => ['name'=>'Roulette','controller'=>App\Games\Roulette\Controllers\RouletteController::class],
+];
+
+
+⸻
+
+🎰 2. Slots Module
+
+a. Migration: create_slots_bets_table
+
+Schema::create('slots_bets', function (Blueprint $t) {
+  $t->id();
+  $t->foreignId('user_id')->constrained()->onDelete('cascade');
+  $t->decimal('bet_amount',16,8);
+  $t->string('client_seed');
+  $t->string('server_seed');
+  $t->string('server_seed_hash');
+  $t->json('reels');        // e.g. ["Cherry","7","BAR"]
+  $t->decimal('payout',16,8);
+  $t->timestamps();
+});
+
+b. Service Logic: SlotsService.php
+
+public function spin(string $clientSeed, float $betAmount): array
+{
+    // 1. Generate server seed + hash
+    $serverSeed = bin2hex(random_bytes(16));
+    $hash       = hash('sha256', $serverSeed);
+
+    // 2. Combine & hash to get pseudorandom bytes
+    $comboHash  = hash('sha256', $serverSeed.$clientSeed);
+
+    // 3. Derive reels (3×3 grid example)
+    $symbols    = ['Cherry','7','BAR','Bell','Lemon'];
+    $reels      = [];
+    for ($i=0; $i<3; $i++) {
+      $slice = substr($comboHash, $i*8, 8);
+      $num   = hexdec($slice);
+      $reels[] = $symbols[$num % count($symbols)];
+    }
+
+    // 4. Determine payout via paytable
+    $payoutMultiplier = $this->evaluatePaytable($reels);
+    $payout = round($betAmount * $payoutMultiplier, 8);
+
+    // 5. Return structured result
+    return compact('serverSeed','hash','reels','payout');
+}
+
+c. Controller & Routes: routes.php
+
+Route::post('/slots/spin', [SlotsController::class,'spin'])->name('slots.spin');
+
+In SlotsController deduct/add wallet balance, call SlotsService::spin(), record in DB, and return JSON:
+
+return response()->json([
+  'reels'=>$result['reels'],
+  'payout'=>$result['payout'],
+  'server_hash'=>$result['hash'],
+  'server_reveal'=>$result['serverSeed'],
+]);
+
+d. Frontend Stub
+	•	Blade/Vue component with a “Spin” button
+	•	Inputs: Bet amount + client seed (or auto‐generate)
+	•	Display 3 reels, payout, and reveal/hash section
+
+⸻
+
+🃏 3. Blackjack Module
+
+a. Migration: create_blackjack_games_table
+
+Schema::create('blackjack_games', function (Blueprint $t) {
+  $t->id();
+  $t->foreignId('user_id')->constrained();
+  $t->string('client_seed');
+  $t->string('server_seed');
+  $t->string('server_seed_hash');
+  $t->json('player_hand');
+  $t->json('dealer_hand');
+  $t->decimal('bet_amount',16,8);
+  $t->decimal('payout',16,8);
+  $t->timestamps();
+});
+
+b. Service Logic: BlackjackService.php
+
+public function deal(string $clientSeed, float $bet): array
+{
+    // 1. Seeds
+    $serverSeed = bin2hex(random_bytes(16));
+    $hash       = hash('sha256', $serverSeed);
+    $deckHash   = hash('sha256', $serverSeed.$clientSeed);
+
+    // 2. Build & shuffle deck deterministically
+    $cards = $this->standardDeck();
+    $shuffled = $this->shuffleDeck($cards, $deckHash);
+
+    // 3. Deal hands
+    $player = array_splice($shuffled,0,2);
+    $dealer = array_splice($shuffled,0,2);
+
+    // 4. Simple auto‐stand logic for demo
+    $playerScore = $this->score($player);
+    if ($playerScore < 17) {
+      $player[] = array_shift($shuffled);
+    }
+    $dealerScore = $this->score($dealer);
+    while ($dealerScore < 17) {
+      $dealer[] = array_shift($shuffled);
+      $dealerScore = $this->score($dealer);
+    }
+
+    // 5. Determine win/lose/push
+    $payout = $this->calculatePayout($playerScore, $dealerScore, $bet);
+
+    return compact('serverSeed','hash','player','dealer','payout');
+}
+
+c. Controller & Frontend
+	•	Route: POST /blackjack/play → returns JSON with hands + payout
+	•	Frontend: display cards, “Hit”/“Stand” buttons, seed‐verification UI
+
+⸻
+
+🎡 4. Roulette Module
+
+a. Migration: create_roulette_bets_table
+
+Schema::create('roulette_bets', function (Blueprint $t) {
+  $t->id();
+  $t->foreignId('user_id')->constrained();
+  $t->string('client_seed');
+  $t->string('server_seed');
+  $t->string('server_seed_hash');
+  $t->integer('winning_number');
+  $t->string('bet_type');   // e.g. “red”, “even”, “17”  
+  $t->decimal('bet_amount',16,8);
+  $t->decimal('payout',16,8);
+  $t->timestamps();
+});
+
+b. Service Logic: RouletteService.php
+
+public function spin(string $clientSeed, float $bet, string $betType): array
+{
+    $serverSeed = bin2hex(random_bytes(16));
+    $hash       = hash('sha256', $serverSeed);
+    $combo      = hash('sha256', $serverSeed.$clientSeed);
+    $number     = hexdec(substr($combo,0,8)) % 37; // 0–36
+    $payoutMulti= $this->evaluateRoulette($number,$betType);
+    return [
+      'serverSeed'=>$serverSeed,
+      'hash'=>$hash,
+      'number'=>$number,
+      'payout'=>$bet * $payoutMulti,
+    ];
+}
+
+c. Controller & Frontend
+	•	Route: POST /roulette/spin → JSON result
+	•	Frontend: interactive wheel graphic (Vue), bet slip inputs
+
+⸻
+
+✅ Next Steps
+	1.	Implement paytable logic for all games in their Service classes.
+	2.	Build Blade/Vue views to join your existing layout (reuse wallet-balance component).
+	3.	Add game toggles to your admin panel to turn modules on/off.
+
+⸻
+
+🔮 Follow-Up Prompts
+	•	“Generate the Vue component for the Slots spin animation.”
+	•	“Write PHPUnit tests for the Blackjack shuffle and payout logic.”
+	•	“Show me how to add a progressive jackpot that grows with every bet.”

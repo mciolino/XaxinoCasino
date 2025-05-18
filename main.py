@@ -13,7 +13,13 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "xaxino_secret_key")
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///casino.db")
+# Make sure we use the right PostgreSQL URL format
+database_url = os.environ.get("DATABASE_URL")
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Always provide a fallback if DATABASE_URL is not set
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///casino.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize the database
@@ -30,6 +36,7 @@ class User(db.Model):
     kyc_status = db.Column(db.String(20), default='pending')
     wallets = db.relationship('Wallet', backref='user', lazy=True)
     bets = db.relationship('DiceBet', backref='user', lazy=True)
+    slot_bets = db.relationship('SlotBet', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -60,6 +67,19 @@ class DiceBet(db.Model):
     currency = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class SlotBet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bet_amount = db.Column(db.Float, nullable=False)
+    client_seed = db.Column(db.String(64), nullable=False)
+    server_seed = db.Column(db.String(64), nullable=False)
+    server_seed_hash = db.Column(db.String(64), nullable=False)
+    result_symbols = db.Column(db.String(64), nullable=False)  # Comma-separated symbols
+    multiplier = db.Column(db.Float, nullable=False)
+    payout = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(10), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class KycDocument(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -82,6 +102,36 @@ def generate_wallet_address(currency):
 def generate_private_key():
     """Generate a random private key for demo purposes"""
     return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
+    
+def evaluate_slot_symbols(symbols):
+    """Evaluate slot machine symbols and return multiplier"""
+    # Define base multipliers for different combinations
+    multipliers = {
+        '7,7,7': 10.0,       # Jackpot
+        'BAR,BAR,BAR': 5.0,  # Triple BAR
+        'BELL,BELL,BELL': 4.0, # Triple Bell
+        'CHERRY,CHERRY,CHERRY': 3.0, # Triple Cherry
+        'LEMON,LEMON,LEMON': 2.0, # Triple Lemon
+    }
+    
+    # Create a key for lookup
+    symbols_key = ','.join(symbols)
+    
+    # Check if we have an exact match
+    if symbols_key in multipliers:
+        return multipliers[symbols_key]
+    
+    # Check for any two matching symbols (1.5x)
+    symbol_counts = {}
+    for symbol in symbols:
+        symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+    
+    for symbol, count in symbol_counts.items():
+        if count >= 2:
+            return 1.5
+    
+    # No matches
+    return 0.0
 
 def get_user_wallets():
     """Get current user's wallets or create them if they don't exist"""
@@ -107,11 +157,18 @@ def get_user_wallets():
     return user.wallets
 
 def get_recent_bets():
-    """Get the user's recent bets"""
+    """Get the user's recent dice bets"""
     if 'user_id' not in session:
         return []
     
     return DiceBet.query.filter_by(user_id=session['user_id']).order_by(DiceBet.created_at.desc()).limit(10).all()
+
+def get_recent_spins():
+    """Get the user's recent slot machine spins"""
+    if 'user_id' not in session:
+        return []
+    
+    return SlotBet.query.filter_by(user_id=session['user_id']).order_by(SlotBet.created_at.desc()).limit(10).all()
 
 # Routes
 @app.route('/')
