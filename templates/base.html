@@ -381,7 +381,9 @@
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                     <li><a class="dropdown-item" href="{{ url_for('profile') }}">My Profile</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('wallets') }}">My Wallets</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('bonuses') }}">My Bonuses</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('kyc') }}">KYC Verification</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('responsible_gaming') }}">Responsible Gaming</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a>
@@ -425,7 +427,7 @@
                             <li><a href="{{ url_for('home') }}">Home</a></li>
                             <li><a href="#">Terms of Service</a></li>
                             <li><a href="#">Privacy Policy</a></li>
-                            <li><a href="#">Responsible Gaming</a></li>
+                            <li><a href="{{ url_for('responsible_gaming') }}">Responsible Gaming</a></li>
                         </ul>
                     </div>
                     <div class="col-md-4">
