@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+
+{% block title %}VIP Loyalty Program{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-banner {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        padding: 3rem 0;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .vip-level-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .vip-level-badge::after {
+        content: '';
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+    }
+    
+    .level-bronze {
+        background: linear-gradient(135deg, #cd7f32, #b36a00);
+    }
+    
+    .level-silver {
+        background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    }
+    
+    .level-gold {
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
+    }
+    
+    .level-platinum {
+        background: linear-gradient(135deg, #e5e4e2, #b9b9b9);
+    }
+    
+    .level-diamond {
+        background: linear-gradient(135deg, #b9f2ff, #77ccff);
+    }
+    
+    .progress-container {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .vip-progress {
+        height: 12px;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
+    }
+    
+    .vip-progress .progress-bar {
+        background-color: var(--primary-color);
+    }
+    
+    .vip-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: transform 0.3s ease;
+    }
+    
+    .vip-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .vip-card.active {
+        border: 2px solid var(--primary-color);
+    }
+    
+    .vip-badge {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .vip-badge-bronze {
+        background: linear-gradient(135deg, #cd7f32, #b36a00);
+        color: #fff;
+    }
+    
+    .vip-badge-silver {
+        background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+        color: #fff;
+    }
+    
+    .vip-badge-gold {
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
+        color: #fff;
+    }
+    
+    .vip-badge-platinum {
+        background: linear-gradient(135deg, #e5e4e2, #b9b9b9);
+        color: #fff;
+    }
+    
+    .vip-badge-diamond {
+        background: linear-gradient(135deg, #b9f2ff, #77ccff);
+        color: #fff;
+    }
+    
+    .benefit-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .benefit-item:last-child {
+        border-bottom: none;
+    }
+    
+    .benefit-name {
+        font-weight: normal;
+        color: var(--text-muted);
+    }
+    
+    .benefit-value {
+        font-weight: bold;
+    }
+    
+    .benefit-value.highlight {
+        color: var(--primary-color);
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-radius: 10px;
+        background-color: var(--lighter-bg);
+        margin-bottom: 1rem;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .activity-details {
+        flex: 1;
+    }
+    
+    .activity-time {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    
+    .level-comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    
+    .level-comparison-table th, 
+    .level-comparison-table td {
+        padding: 0.75rem 1rem;
+        text-align: center;
+    }
+    
+    .level-comparison-table th {
+        background-color: var(--lighter-bg);
+        font-weight: normal;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .level-comparison-table td {
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .level-comparison-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .level-comparison-table th:first-child, 
+    .level-comparison-table td:first-child {
+        text-align: left;
+    }
+    
+    .level-current {
+        border: 2px solid var(--primary-color);
+        border-radius: 5px;
+    }
+    
+    .level-header {
+        padding: 0.5rem;
+        border-radius: 5px 5px 0 0;
+        text-align: center;
+        color: #fff;
+        font-weight: bold;
+    }
+    
+    .level-bronze-header {
+        background: linear-gradient(135deg, #cd7f32, #b36a00);
+    }
+    
+    .level-silver-header {
+        background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    }
+    
+    .level-gold-header {
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
+    }
+    
+    .level-platinum-header {
+        background: linear-gradient(135deg, #e5e4e2, #b9b9b9);
+    }
+    
+    .level-diamond-header {
+        background: linear-gradient(135deg, #b9f2ff, #77ccff);
+    }
+    
+    .point-badge {
+        background-color: var(--primary-color);
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+    
+    .rewards-list {
+        padding-left: 1.5rem;
+    }
+    
+    .rewards-list li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-icon {
+        cursor: help;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-banner">
+        <div class="container">
+            <div class="vip-level-badge level-{{ current_level.name.lower() }}">
+                <i class="fas fa-crown fa-2x"></i>
+            </div>
+            <h1 class="display-4 mb-3">{{ current_level.name }} VIP</h1>
+            <p class="lead mb-0">Welcome to your exclusive VIP rewards program</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="progress-container">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h4 class="mb-1">Your VIP Progress</h4>
+                        <span class="point-badge">
+                            <i class="fas fa-star me-1"></i> {{ vip_stats.points }} Points
+                        </span>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted">{{ current_level.name }} Level</span>
+                        {% if next_level %}
+                            <h5 class="mb-0">{{ points_needed }} points to {{ next_level.name }}</h5>
+                        {% else %}
+                            <h5 class="mb-0 text-primary">Maximum Level Reached!</h5>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="progress vip-progress">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ progress_percent }}%" 
+                         aria-valuenow="{{ progress_percent }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-2">
+                    <div>
+                        <small class="text-muted">{{ current_level.name }}</small>
+                    </div>
+                    {% if next_level %}
+                        <div>
+                            <small class="text-muted">{{ next_level.name }}</small>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-4">
+                    <h5>Lifetime Statistics</h5>
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="d-flex flex-column text-center">
+                                <span class="fs-3 fw-bold">{{ vip_stats.lifetime_points }}</span>
+                                <small class="text-muted">Lifetime Points</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="d-flex flex-column text-center">
+                                <span class="fs-3 fw-bold">{{ vip_stats.total_wagered|default(0)|round(2) }}</span>
+                                <small class="text-muted">Total Wagered</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="d-flex flex-column text-center">
+                                <span class="fs-3 fw-bold">{{ vip_stats.total_deposits|default(0)|round(2) }}</span>
+                                <small class="text-muted">Total Deposits</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="d-flex flex-column text-center">
+                                <span class="fs-3 fw-bold">{{ vip_stats.bonuses_claimed|default(0) }}</span>
+                                <small class="text-muted">Bonuses Claimed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h4 class="mb-3">Your VIP Benefits</h4>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="benefit-item">
+                        <span class="benefit-name">Cashback Percentage</span>
+                        <span class="benefit-value highlight">{{ current_level.cashback_percent }}%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <span class="benefit-name">Monthly Bonus</span>
+                        <span class="benefit-value highlight">{{ current_level.monthly_bonus }} BTC</span>
+                    </div>
+                    <div class="benefit-item">
+                        <span class="benefit-name">Daily Withdrawal Limit</span>
+                        <span class="benefit-value">{{ current_level.withdrawal_limit }} BTC</span>
+                    </div>
+                    <div class="benefit-item">
+                        <span class="benefit-name">Dedicated Support</span>
+                        <span class="benefit-value">
+                            {% if current_level.custom_support %}
+                                <i class="fas fa-check-circle text-success"></i> Yes
+                            {% else %}
+                                <i class="fas fa-times-circle text-muted"></i> No
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="benefit-item">
+                        <span class="benefit-name">Birthday Bonus</span>
+                        <span class="benefit-value">{{ current_level.birthday_bonus }} BTC</span>
+                    </div>
+                    <div class="benefit-item">
+                        <span class="benefit-name">Point Multiplier</span>
+                        <span class="benefit-value">{{ current_level.level_multiplier }}x</span>
+                    </div>
+                </div>
+            </div>
+            
+            <h4 class="mb-3">How to Earn VIP Points</h4>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p>Earn points with every bet, deposit, and activity on Xaxino Casino. The more you play, the higher your VIP level and rewards!</p>
+                    
+                    <ul class="rewards-list">
+                        <li>1 point for every 0.0001 BTC wagered on Slots</li>
+                        <li>1 point for every 0.0002 BTC wagered on Dice</li>
+                        <li>1 point for every 0.0003 BTC wagered on Blackjack</li>
+                        <li>100 points for each deposit of 0.01 BTC or more</li>
+                        <li>50 points daily when you log in for 7 consecutive days</li>
+                        <li>500 bonus points for completing your KYC verification</li>
+                    </ul>
+                    
+                    <div class="alert alert-dark mt-3">
+                        <i class="fas fa-info-circle me-2"></i> Your current level multiplier ({{ current_level.level_multiplier }}x) is applied to all point earnings.
+                    </div>
+                </div>
+            </div>
+            
+            <h4 class="mb-3">VIP Level Comparison</h4>
+            <div class="table-responsive">
+                <table class="level-comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Benefit</th>
+                            {% for level in benefits_comparison %}
+                                <th class="{% if level.is_current %}level-current{% endif %}">
+                                    <div class="level-header level-{{ level.name.lower() }}-header">
+                                        {{ level.name }}
+                                    </div>
+                                    <div class="mt-2">
+                                        {{ level.required_points }} pts
+                                    </div>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Cashback %</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {{ level.cashback_percent }}%
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Monthly Bonus</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {{ level.monthly_bonus }} BTC
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Withdrawal Limit</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {{ level.withdrawal_limit }} BTC
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Dedicated Support</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {% if level.custom_support %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-muted"></i>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Birthday Bonus</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {{ level.birthday_bonus }} BTC
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>Point Multiplier</td>
+                            {% for level in benefits_comparison %}
+                                <td class="{% if level.is_current %}level-current{% endif %}">
+                                    {{ level.level_multiplier }}x
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Recent VIP Activity</h4>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                        {% for activity in recent_activity %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    {% if activity.type == 'level_up' %}
+                                        <i class="fas fa-level-up-alt"></i>
+                                    {% elif activity.type == 'cashback' %}
+                                        <i class="fas fa-coins"></i>
+                                    {% elif activity.type == 'bonus' %}
+                                        <i class="fas fa-gift"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="activity-details">
+                                    <div>
+                                        {% if activity.type == 'level_up' %}
+                                            Leveled up to <strong>{{ activity.level }}</strong>
+                                        {% elif activity.type == 'cashback' %}
+                                            Received <strong>{{ activity.amount }} {{ activity.currency }}</strong> cashback
+                                        {% elif activity.type == 'bonus' %}
+                                            Claimed <strong>{{ activity.amount }} {{ activity.currency }}</strong> VIP bonus
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-time">
+                                        {{ activity.date.strftime('%d %b %Y, %H:%M') }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-4">
+                            <i class="fas fa-history fa-3x mb-3 text-muted"></i>
+                            <p>No recent VIP activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">VIP Rewards</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Available Cashback</h5>
+                        <div class="text-center my-3">
+                            <span class="fs-1 fw-bold text-success">0.00 BTC</span>
+                        </div>
+                        <button class="btn btn-success w-100" disabled>
+                            <i class="fas fa-coins me-2"></i> Claim Cashback
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">No cashback available at this time</small>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5>Monthly Bonus</h5>
+                        <div class="text-center my-3">
+                            <span class="fs-1 fw-bold text-primary">{{ current_level.monthly_bonus }} BTC</span>
+                        </div>
+                        <button class="btn btn-primary w-100">
+                            <i class="fas fa-gift me-2"></i> Claim Monthly Bonus
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">Next monthly bonus available in 12 days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">VIP Support</h4>
+                </div>
+                <div class="card-body">
+                    {% if current_level.custom_support %}
+                        <p>As a {{ current_level.name }} member, you have access to dedicated VIP support.</p>
+                        <button class="btn btn-outline-light w-100 mb-3">
+                            <i class="fas fa-headset me-2"></i> Contact VIP Support
+                        </button>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="VIP Manager" class="rounded-circle" width="60" height="60">
+                            </div>
+                            <div>
+                                <h5 class="mb-1">James Wilson</h5>
+                                <p class="mb-0 text-muted">Your Personal VIP Manager</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p>Dedicated VIP support is available to players at Gold level and above.</p>
+                        <div class="alert alert-dark">
+                            <i class="fas fa-info-circle me-2"></i> Reach Gold level to unlock your personal VIP manager.
+                        </div>
+                        <button class="btn btn-outline-light w-100">
+                            <i class="fas fa-headset me-2"></i> Contact Support
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

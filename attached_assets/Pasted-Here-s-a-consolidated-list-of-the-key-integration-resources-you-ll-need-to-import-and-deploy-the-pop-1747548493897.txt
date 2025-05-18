@@ -1,0 +1,65 @@
+Here’s a consolidated list of the key integration resources you’ll need to import and deploy the popular slot titles we discussed—grouped by provider or aggregator. Each entry includes the official API/integration guide and any aggregator docs you can leverage for a single‐point integration.
+
+⸻
+
+🎛️ 1. Aggregator-First Integrations
+	•	SOFTSWISS Game Aggregator
+One integration, thousands of games (including NetEnt, Play’n GO, Pragmatic Play, Big Time Gaming, etc.)  ￼
+API & iFrame docs:
+https://www.softswiss.com/game-aggregator/
+	•	EveryMatrix CasinoEngine
+Fully-managed casino platform + game content library
+https://everymatrix.com/casinoengine/platform-solution/  ￼
+Legacy Web API protocol (mobile & native):
+https://everymatrix.com/everymatrix-to-service-native-mobile-apps-with-new-web-api-protocol/  ￼
+	•	SoftGamings Unified API
+Single API to integrate Play’n GO, Microgaming, Pragmatic Play, and more
+	•	Play’n GO via SoftGamings: https://www.softgamings.com/online-gambling-software-providers/playn-go/  ￼
+	•	Microgaming via SoftGamings: https://www.softgamings.com/online-gambling-software-providers/microgaming-casino-software/  ￼
+
+⸻
+
+🕹️ 2. Direct Provider Integrations
+
+NetEnt (Starburst, Gonzo’s Quest, Blood Suckers, Mega Joker…)
+Technical services & platform integration
+https://www.netent.com/en/technical-services/  ￼
+
+Play’n GO (Book of Dead, Reactoonz…)
+API integration via aggregator or bespoke
+https://www.gammastack.com/playn-go/  ￼
+
+Pragmatic Play (Gates of Olympus…)
+Customizable API platform for slots, live casino, bingo
+https://pragmatic.solutions/integration-hub  ￼
+
+Microgaming (Mega Moolah, progressive series…)
+REST API integration & content updates
+https://www.gammastack.com/microgaming/  ￼
+
+Big Time Gaming (White Rabbit Megaways…)
+Integrate via NuxGame or aggregator
+https://nuxgame.com/games/big-time-gaming  ￼
+
+⸻
+
+🔧 3. Supplementary Resources
+	•	Pragmatic Solutions iGaming API (Postman workspace)
+Comprehensive method definitions for Pragmatic Play & partners
+https://www.postman.com/pragmaticsolutions/pragmatic-solutions-s-public-workspace/documentation/zu98fzy/igaming-platform-api-documentation  ￼
+	•	SOFTSWISS Knowledge Base
+Guides on casino setup, wallet integration, RNG, operations
+https://www.softswiss.com/knowledge-base/  ￼
+
+⸻
+
+🗺️ Next Steps
+	1.	Choose your integration path:
+	•	Aggregator (SoftSwiss, SoftGamings, EveryMatrix) for rapid, multi-provider deployment
+	•	Direct per-provider for deeper control or exclusive titles
+	2.	Obtain commercial licenses and developer accounts from each provider.
+	3.	Configure API credentials and environment variables in your .env/Secrets panel.
+	4.	Wire up your plugin loader (e.g., config/games.php) to enable each provider’s controller.
+	5.	Test in sandbox mode and validate provably-fair mechanics before going live.
+
+With these resources in hand, you’ll be equipped to import Starburst, Book of Dead, Mega Moolah, Gates of Olympus, White Rabbit Megaways, and many more into your modular Xaxino platform—ready for seamless deployment and central management.

@@ -41,6 +41,7 @@ class User(db.Model):
     responsible_gaming = db.relationship('ResponsibleGaming', backref='user', uselist=False, lazy=True)
     deposit_periods = db.relationship('DepositLimitPeriod', backref='user', lazy=True)
     bonuses = db.relationship('Bonus', backref='user', lazy=True)
+    vip_stats = db.relationship('VIPUserStats', backref='user', uselist=False, lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -158,6 +159,30 @@ class Promotion(db.Model):
     start_date = db.Column(db.DateTime, default=datetime.utcnow)
     end_date = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class VIPLevel(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)  # 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'
+    required_points = db.Column(db.Integer, nullable=False)  # Points needed to reach this level
+    cashback_percent = db.Column(db.Float, nullable=False, default=0)  # Cashback percentage for this level
+    monthly_bonus = db.Column(db.Float, nullable=False, default=0)  # Monthly bonus for this level
+    withdrawal_limit = db.Column(db.Float, nullable=False)  # Daily withdrawal limit for this level
+    custom_support = db.Column(db.Boolean, default=False)  # Whether this level gets dedicated support
+    birthday_bonus = db.Column(db.Float, default=0)  # Birthday bonus for this level
+    level_multiplier = db.Column(db.Float, default=1.0)  # Point multiplier for this level
+
+class VIPUserStats(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    current_level_id = db.Column(db.Integer, db.ForeignKey('vip_level.id'), nullable=False)
+    points = db.Column(db.Integer, default=0)
+    lifetime_points = db.Column(db.Integer, default=0)
+    total_wagered = db.Column(db.Float, default=0)
+    total_deposits = db.Column(db.Float, default=0)
+    cashback_claimed = db.Column(db.Float, default=0)
+    bonuses_claimed = db.Column(db.Integer, default=0)
+    last_level_up = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # Helper functions
 def generate_wallet_address(currency):
@@ -1108,6 +1133,103 @@ def admin():
     
     return render_template('admin.html', pending_kyc=pending_kyc, users=users)
 
+# VIP Program route
+@app.route('/vip-program')
+def vip_program():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('logout'))
+    
+    # Get VIP levels
+    vip_levels = VIPLevel.query.order_by(VIPLevel.required_points).all()
+    
+    # Get or create user VIP stats
+    vip_stats = VIPUserStats.query.filter_by(user_id=user.id).first()
+    
+    # If user doesn't have VIP stats, create them with default Bronze level
+    if not vip_stats:
+        bronze_level = VIPLevel.query.filter_by(name='Bronze').first()
+        if not bronze_level:
+            bronze_level = VIPLevel()
+            bronze_level.name = 'Bronze'
+            bronze_level.required_points = 0
+            bronze_level.cashback_percent = 1
+            bronze_level.monthly_bonus = 0.01
+            bronze_level.withdrawal_limit = 1.0
+            bronze_level.custom_support = False
+            bronze_level.birthday_bonus = 0.05
+            bronze_level.level_multiplier = 1.0
+            db.session.add(bronze_level)
+            db.session.commit()
+        
+        vip_stats = VIPUserStats()
+        vip_stats.user_id = user.id
+        vip_stats.current_level_id = bronze_level.id
+        vip_stats.points = 0
+        vip_stats.lifetime_points = 0
+        db.session.add(vip_stats)
+        db.session.commit()
+    
+    # Get current VIP level
+    current_level = VIPLevel.query.get(vip_stats.current_level_id)
+    
+    # Calculate next level
+    next_level = None
+    for level in vip_levels:
+        if level.required_points > vip_stats.points:
+            next_level = level
+            break
+    
+    # Calculate progress to next level
+    progress_percent = 0
+    points_needed = 0
+    
+    if next_level:
+        points_needed = next_level.required_points - vip_stats.points
+        # Calculate percentage progress to next level
+        if current_level:
+            progress_range = next_level.required_points - current_level.required_points
+            if progress_range > 0:
+                progress = vip_stats.points - current_level.required_points
+                progress_percent = (progress / progress_range) * 100
+    
+    # Prepare recent activity
+    # For demo, we'll create some sample activities
+    recent_activity = [
+        {'type': 'level_up', 'level': 'Bronze', 'date': datetime.utcnow() - timedelta(days=30)},
+        {'type': 'cashback', 'amount': 0.05, 'currency': 'BTC', 'date': datetime.utcnow() - timedelta(days=15)},
+        {'type': 'bonus', 'amount': 0.01, 'currency': 'BTC', 'date': datetime.utcnow() - timedelta(days=7)},
+    ]
+    
+    # Prepare benefits comparison
+    benefits_comparison = []
+    for level in vip_levels:
+        benefits_comparison.append({
+            'id': level.id,
+            'name': level.name,
+            'required_points': level.required_points,
+            'cashback_percent': level.cashback_percent,
+            'monthly_bonus': level.monthly_bonus,
+            'withdrawal_limit': level.withdrawal_limit,
+            'custom_support': level.custom_support,
+            'birthday_bonus': level.birthday_bonus,
+            'level_multiplier': level.level_multiplier,
+            'is_current': level.id == current_level.id if current_level else False
+        })
+    
+    return render_template('vip_program.html',
+                          user=user,
+                          vip_stats=vip_stats,
+                          current_level=current_level,
+                          next_level=next_level,
+                          progress_percent=progress_percent,
+                          points_needed=points_needed,
+                          recent_activity=recent_activity,
+                          benefits_comparison=benefits_comparison)
+
 # Initialize the database and create admin user for demo
 with app.app_context():
     db.create_all()
@@ -1184,6 +1306,70 @@ with app.app_context():
         cashback.start_date = datetime.utcnow()
         cashback.end_date = datetime.utcnow() + timedelta(days=90)  # Available for 3 months
         db.session.add(cashback)
+        
+        db.session.commit()
+        
+    # Create VIP levels if none exist
+    if VIPLevel.query.count() == 0:
+        # Bronze Level (Default)
+        bronze = VIPLevel()
+        bronze.name = 'Bronze'
+        bronze.required_points = 0
+        bronze.cashback_percent = 1
+        bronze.monthly_bonus = 0.01
+        bronze.withdrawal_limit = 1.0
+        bronze.custom_support = False
+        bronze.birthday_bonus = 0.05
+        bronze.level_multiplier = 1.0
+        db.session.add(bronze)
+        
+        # Silver Level
+        silver = VIPLevel()
+        silver.name = 'Silver'
+        silver.required_points = 1000
+        silver.cashback_percent = 2
+        silver.monthly_bonus = 0.05
+        silver.withdrawal_limit = 3.0
+        silver.custom_support = False
+        silver.birthday_bonus = 0.1
+        silver.level_multiplier = 1.2
+        db.session.add(silver)
+        
+        # Gold Level
+        gold = VIPLevel()
+        gold.name = 'Gold'
+        gold.required_points = 5000
+        gold.cashback_percent = 5
+        gold.monthly_bonus = 0.1
+        gold.withdrawal_limit = 5.0
+        gold.custom_support = True
+        gold.birthday_bonus = 0.2
+        gold.level_multiplier = 1.5
+        db.session.add(gold)
+        
+        # Platinum Level
+        platinum = VIPLevel()
+        platinum.name = 'Platinum'
+        platinum.required_points = 15000
+        platinum.cashback_percent = 10
+        platinum.monthly_bonus = 0.25
+        platinum.withdrawal_limit = 10.0
+        platinum.custom_support = True
+        platinum.birthday_bonus = 0.5
+        platinum.level_multiplier = 2.0
+        db.session.add(platinum)
+        
+        # Diamond Level
+        diamond = VIPLevel()
+        diamond.name = 'Diamond'
+        diamond.required_points = 50000
+        diamond.cashback_percent = 15
+        diamond.monthly_bonus = 0.5
+        diamond.withdrawal_limit = 20.0
+        diamond.custom_support = True
+        diamond.birthday_bonus = 1.0
+        diamond.level_multiplier = 3.0
+        db.session.add(diamond)
         
         db.session.commit()
 
