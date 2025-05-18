@@ -183,6 +183,8 @@ class VIPUserStats(db.Model):
     bonuses_claimed = db.Column(db.Integer, default=0)
     last_level_up = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+# Referral models removed for now
 
 # Helper functions
 def generate_wallet_address(currency):
@@ -493,6 +495,14 @@ def slots_game():
     recent_spins = get_recent_spins()
     
     return render_template('slots.html', wallets=wallets, recent_spins=recent_spins)
+    
+@app.route('/games/featured-slots')
+def featured_slots():
+    """Display the featured slot games"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
+    return render_template('featured_slots.html')
 
 @app.route('/games/blackjack')
 def blackjack_game():
@@ -1117,6 +1127,9 @@ def claim_bonus(promotion_id):
     
     flash(f'You have successfully claimed the {promotion.name} bonus!', 'success')
     return redirect(url_for('bonuses'))
+
+# Referral system route removed for now
+
 
 @app.route('/admin')
 def admin():

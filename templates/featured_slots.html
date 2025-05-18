@@ -1,0 +1,518 @@
+{% extends 'base.html' %}
+
+{% block title %}Featured Slot Games{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-banner {
+        background: linear-gradient(135deg, #502c84, #7b3e94);
+        padding: 3rem 0;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .slot-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        border: 1px solid var(--border-color);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .slot-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .slot-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .slot-content {
+        padding: 1.25rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .slot-title {
+        font-weight: bold;
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .slot-provider {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    
+    .slot-features {
+        margin-bottom: 1rem;
+    }
+    
+    .feature-chip {
+        display: inline-block;
+        background-color: var(--light-bg);
+        color: var(--text-color);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .slot-description {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+        flex-grow: 1;
+    }
+    
+    .slot-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+    }
+    
+    .slot-rtp {
+        background-color: var(--light-bg);
+        color: var(--text-color);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .new-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: var(--primary-color);
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .volatile-badge {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        background-color: var(--warning-color);
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    
+    .category-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .category-filter {
+        background-color: var(--light-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .category-filter:hover {
+        background-color: var(--lighter-bg);
+    }
+    
+    .category-filter.active {
+        background-color: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+    }
+    
+    .provider-filters {
+        margin-bottom: 2rem;
+    }
+    
+    .provider-filter {
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .provider-filter:hover,
+    .provider-filter.active {
+        opacity: 1;
+    }
+    
+    .providers-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .provider-logo {
+        height: 30px;
+    }
+    
+    .load-more {
+        margin-top: 2rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-banner">
+        <div class="container">
+            <h1 class="display-4 mb-3">Featured Slot Games</h1>
+            <p class="lead mb-0">Discover our latest and most popular slot games</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="category-filters mb-4">
+                <div class="category-filter active">All Games</div>
+                <div class="category-filter">New Releases</div>
+                <div class="category-filter">Popular</div>
+                <div class="category-filter">Jackpots</div>
+                <div class="category-filter">Megaways</div>
+                <div class="category-filter">Classic</div>
+                <div class="category-filter">Themed</div>
+            </div>
+            
+            <div class="slot-grid">
+                <!-- Starburst -->
+                <div class="slot-card">
+                    <div class="new-badge">New</div>
+                    <img src="https://i.imgur.com/0JgfBmg.jpg" alt="Starburst" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Starburst</h3>
+                        <div class="slot-provider">NetEnt</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Expanding Wilds</span>
+                            <span class="feature-chip">Win Both Ways</span>
+                            <span class="feature-chip">Re-Spins</span>
+                        </div>
+                        
+                        <p class="slot-description">A vibrant, low-volatility NetEnt staple known for expanding wilds and fast play.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 96.1%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Book of Dead -->
+                <div class="slot-card">
+                    <div class="volatile-badge">High Volatility</div>
+                    <img src="https://i.imgur.com/5bG0gXM.jpg" alt="Book of Dead" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Book of Dead</h3>
+                        <div class="slot-provider">Play'n GO</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Free Spins</span>
+                            <span class="feature-chip">Expanding Symbols</span>
+                            <span class="feature-chip">Gamble Feature</span>
+                        </div>
+                        
+                        <p class="slot-description">High-volatility, Egyptian-adventure slot with free-spin retriggers from Play'n GO.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 96.21%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gonzo's Quest -->
+                <div class="slot-card">
+                    <img src="https://i.imgur.com/I7aUF7D.jpg" alt="Gonzo's Quest" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Gonzo's Quest</h3>
+                        <div class="slot-provider">NetEnt</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Avalanche</span>
+                            <span class="feature-chip">Multipliers</span>
+                            <span class="feature-chip">Free Falls</span>
+                        </div>
+                        
+                        <p class="slot-description">NetEnt's avalanche mechanic and increasing multipliers deliver dynamic gameplay.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 95.97%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gates of Olympus -->
+                <div class="slot-card">
+                    <div class="new-badge">New</div>
+                    <div class="volatile-badge">High Volatility</div>
+                    <img src="https://i.imgur.com/Gxqn7DR.jpg" alt="Gates of Olympus" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Gates of Olympus</h3>
+                        <div class="slot-provider">Pragmatic Play</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Tumbling Reels</span>
+                            <span class="feature-chip">Multiplier Symbols</span>
+                            <span class="feature-chip">Free Spins</span>
+                        </div>
+                        
+                        <p class="slot-description">Pragmatic Play's tumbling reels and multiplier symbols in a mythic Greek setting.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 96.5%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mega Moolah -->
+                <div class="slot-card">
+                    <img src="https://i.imgur.com/K0wVJD5.jpg" alt="Mega Moolah" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Mega Moolah</h3>
+                        <div class="slot-provider">Microgaming</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Progressive Jackpot</span>
+                            <span class="feature-chip">Free Spins</span>
+                            <span class="feature-chip">Wild Multipliers</span>
+                        </div>
+                        
+                        <p class="slot-description">The Guinness-record-holding progressive jackpot slot by Microgaming.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 88.12% + Progressive</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- White Rabbit Megaways -->
+                <div class="slot-card">
+                    <div class="volatile-badge">High Volatility</div>
+                    <img src="https://i.imgur.com/Yqh7dKJ.jpg" alt="White Rabbit Megaways" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">White Rabbit Megaways</h3>
+                        <div class="slot-provider">Big Time Gaming</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Megaways</span>
+                            <span class="feature-chip">Expanding Reels</span>
+                            <span class="feature-chip">Free Spins</span>
+                        </div>
+                        
+                        <p class="slot-description">Big Time Gaming's expanding reel engine and 248,832 ways to win.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 97.72%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reactoonz -->
+                <div class="slot-card">
+                    <img src="https://i.imgur.com/lXILTnH.jpg" alt="Reactoonz" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Reactoonz</h3>
+                        <div class="slot-provider">Play'n GO</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Cascading Grid</span>
+                            <span class="feature-chip">Cluster Pays</span>
+                            <span class="feature-chip">Quantum Features</span>
+                        </div>
+                        
+                        <p class="slot-description">Cluster-pay slot with dynamic cascading wins and quantum features.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 96.51%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Big Bass Bonanza -->
+                <div class="slot-card">
+                    <div class="new-badge">New</div>
+                    <img src="https://i.imgur.com/SJAe8qO.jpg" alt="Big Bass Bonanza" class="slot-image">
+                    <div class="slot-content">
+                        <h3 class="slot-title">Big Bass Bonanza</h3>
+                        <div class="slot-provider">Pragmatic Play</div>
+                        
+                        <div class="slot-features">
+                            <span class="feature-chip">Free Spins</span>
+                            <span class="feature-chip">Multipliers</span>
+                            <span class="feature-chip">Money Collect</span>
+                        </div>
+                        
+                        <p class="slot-description">Fisherman-themed slot with free-spin multipliers and retriggers.</p>
+                        
+                        <div class="slot-footer">
+                            <span class="slot-rtp">RTP: 96.71%</span>
+                            <a href="#" class="btn btn-sm btn-primary">Play Now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="load-more">
+                <button class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-spinner me-2"></i> Load More Games
+                </button>
+            </div>
+        </div>
+        
+        <div class="col-lg-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Filter by Provider</h4>
+                </div>
+                <div class="card-body">
+                    <div class="providers-row">
+                        <div class="provider-filter active" title="NetEnt">
+                            <img src="https://i.imgur.com/2TbBUCX.png" alt="NetEnt" class="provider-logo">
+                        </div>
+                        <div class="provider-filter" title="Play'n GO">
+                            <img src="https://i.imgur.com/R7L5oiL.png" alt="Play'n GO" class="provider-logo">
+                        </div>
+                        <div class="provider-filter" title="Pragmatic Play">
+                            <img src="https://i.imgur.com/G5xJgCu.png" alt="Pragmatic Play" class="provider-logo">
+                        </div>
+                        <div class="provider-filter" title="Microgaming">
+                            <img src="https://i.imgur.com/uxzD7XL.png" alt="Microgaming" class="provider-logo">
+                        </div>
+                        <div class="provider-filter" title="Big Time Gaming">
+                            <img src="https://i.imgur.com/2ILDdcV.png" alt="Big Time Gaming" class="provider-logo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Top Jackpots</h4>
+                </div>
+                <div class="card-body">
+                    <div class="jackpot-item d-flex align-items-center mb-3">
+                        <img src="https://i.imgur.com/K0wVJD5.jpg" alt="Mega Moolah" class="rounded me-3" width="60" height="40">
+                        <div>
+                            <h5 class="mb-1">Mega Moolah</h5>
+                            <div class="text-primary fw-bold">$5,378,921.45</div>
+                        </div>
+                    </div>
+                    
+                    <div class="jackpot-item d-flex align-items-center mb-3">
+                        <img src="https://i.imgur.com/ZNgJstH.jpg" alt="Age of Gods" class="rounded me-3" width="60" height="40">
+                        <div>
+                            <h5 class="mb-1">Age of Gods</h5>
+                            <div class="text-primary fw-bold">$897,654.21</div>
+                        </div>
+                    </div>
+                    
+                    <div class="jackpot-item d-flex align-items-center">
+                        <img src="https://i.imgur.com/U7Pqdb2.jpg" alt="MGM Grand Millions" class="rounded me-3" width="60" height="40">
+                        <div>
+                            <h5 class="mb-1">MGM Grand Millions</h5>
+                            <div class="text-primary fw-bold">$456,789.03</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Top Winners</h4>
+                </div>
+                <div class="card-body">
+                    <div class="winner-item d-flex align-items-center mb-3">
+                        <div class="winner-avatar me-3">
+                            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Winner" class="rounded-circle" width="50" height="50">
+                        </div>
+                        <div>
+                            <h5 class="mb-1">J***s</h5>
+                            <div class="text-success">Won 5.23 BTC <small class="text-muted">on Book of Dead</small></div>
+                        </div>
+                    </div>
+                    
+                    <div class="winner-item d-flex align-items-center mb-3">
+                        <div class="winner-avatar me-3">
+                            <img src="https://randomuser.me/api/portraits/women/28.jpg" alt="Winner" class="rounded-circle" width="50" height="50">
+                        </div>
+                        <div>
+                            <h5 class="mb-1">L***a</h5>
+                            <div class="text-success">Won 3.87 BTC <small class="text-muted">on Gonzo's Quest</small></div>
+                        </div>
+                    </div>
+                    
+                    <div class="winner-item d-flex align-items-center">
+                        <div class="winner-avatar me-3">
+                            <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="Winner" class="rounded-circle" width="50" height="50">
+                        </div>
+                        <div>
+                            <h5 class="mb-1">T***y</h5>
+                            <div class="text-success">Won 2.19 BTC <small class="text-muted">on Starburst</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Special Promotions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="special-promo mb-3">
+                        <div class="alert alert-dark mb-0">
+                            <h5>Free Spins Friday</h5>
+                            <p class="mb-2">Get 50 free spins on Starburst every Friday!</p>
+                            <a href="{{ url_for('bonuses') }}" class="btn btn-sm btn-primary">Claim Now</a>
+                        </div>
+                    </div>
+                    
+                    <div class="special-promo">
+                        <div class="alert alert-dark mb-0">
+                            <h5>Weekend Cashback</h5>
+                            <p class="mb-2">Get 10% cashback on all slot losses during the weekend!</p>
+                            <a href="{{ url_for('bonuses') }}" class="btn btn-sm btn-primary">Learn More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
