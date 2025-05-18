@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xaxino Casino - {% block title %}Ultimate Casino Platform{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+          --primary-color: #ff5722;
+          --secondary-color: #03a9f4;
+          --dark-bg: #121212;
+          --darker-bg: #0a0a0a;
+          --light-bg: #1e1e1e;
+          --lighter-bg: #2d2d2d;
+          --text-color: #f5f5f5;
+          --text-muted: #9e9e9e;
+          --success-color: #4caf50;
+          --danger-color: #f44336;
+          --warning-color: #ff9800;
+          --info-color: #2196f3;
+          --border-color: #333333;
+          --card-bg: #1a1a1a;
+          --btc-color: #f7931a;
+          --eth-color: #627eea;
+        }
+
+        body {
+          font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: var(--text-color);
+          background-color: var(--dark-bg);
+          min-height: 100vh;
+          margin: 0;
+          padding: 0;
+        }
+
+        .casino-body {
+          background-color: var(--dark-bg);
+        }
+
+        .casino-container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
+
+        .casino-content {
+          flex: 1 0 auto;
+        }
+
+        .casino-header {
+          background-color: var(--darker-bg);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .casino-footer {
+          background-color: var(--darker-bg);
+          color: var(--text-muted);
+          padding: 2rem 0;
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+          flex-shrink: 0;
+        }
+
+        /* Buttons and Links */
+        .btn-primary {
+          background-color: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover, .btn-primary:focus {
+          background-color: #ff6f43;
+          border-color: #ff6f43;
+        }
+
+        .btn-outline-light {
+          color: var(--text-color);
+          border-color: var(--border-color);
+        }
+
+        .btn-outline-light:hover {
+          background-color: var(--lighter-bg);
+          color: var(--text-color);
+        }
+
+        a {
+          color: var(--secondary-color);
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: #64c1ff;
+          text-decoration: none;
+        }
+
+        /* Cards */
+        .card {
+          background-color: var(--card-bg);
+          border-radius: 10px;
+          border: 1px solid var(--border-color);
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+          margin-bottom: 1.5rem;
+          overflow: hidden;
+        }
+
+        .card-header {
+          background-color: var(--lighter-bg);
+          border-bottom: 1px solid var(--border-color);
+          color: var(--text-color);
+          padding: 1rem 1.5rem;
+        }
+
+        .card-body {
+          padding: 1.5rem;
+        }
+
+        .card-footer {
+          background-color: var(--lighter-bg);
+          border-top: 1px solid var(--border-color);
+          padding: 1rem 1.5rem;
+        }
+
+        /* Forms */
+        .form-control, .form-select {
+          background-color: var(--lighter-bg);
+          border: 1px solid var(--border-color);
+          color: var(--text-color);
+        }
+
+        .form-control:focus, .form-select:focus {
+          background-color: var(--light-bg);
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 0.25rem rgba(255, 87, 34, 0.25);
+          color: var(--text-color);
+        }
+
+        /* Wallet Card */
+        .wallet-card {
+          background-color: var(--card-bg);
+          border-radius: 10px;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+          overflow: hidden;
+          height: 100%;
+          margin-bottom: 20px;
+        }
+
+        .wallet-card-header {
+          padding: 1.5rem;
+          display: flex;
+          align-items: center;
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .wallet-icon {
+          font-size: 2.5rem;
+          margin-right: 1.5rem;
+        }
+
+        .btc {
+          color: var(--btc-color);
+        }
+
+        .eth {
+          color: var(--eth-color);
+        }
+
+        .wallet-title {
+          flex: 1;
+        }
+
+        .wallet-balance {
+          font-size: 1.5rem;
+          font-weight: bold;
+          margin-top: 0.25rem;
+        }
+
+        .wallet-card-body {
+          padding: 1.5rem;
+        }
+
+        /* Dice Game */
+        .dice-game-container {
+          padding: 1rem;
+        }
+
+        .dice-result-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 200px;
+          background-color: var(--light-bg);
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+          overflow: hidden;
+        }
+
+        .dice-placeholder {
+          text-align: center;
+          color: var(--text-muted);
+        }
+
+        .dice-result {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          padding: 2rem;
+        }
+
+        .result-number {
+          font-size: 5rem;
+          font-weight: bold;
+          margin-bottom: 1rem;
+        }
+
+        .win-badge, .lose-badge {
+          font-size: 1.5rem;
+          font-weight: bold;
+          padding: 0.5rem 2rem;
+          border-radius: 50px;
+          text-transform: uppercase;
+        }
+
+        .win-badge {
+          background-color: var(--success-color);
+          color: white;
+        }
+
+        .lose-badge {
+          background-color: var(--danger-color);
+          color: white;
+        }
+
+        /* Alerts & Messages */
+        .alert {
+          border-radius: 10px;
+        }
+
+        /* Casino Hero */
+        .casino-hero {
+          padding: 2rem 0;
+        }
+
+        .hero-content {
+          text-align: center;
+          padding: 3rem 1rem;
+        }
+
+        .feature-card {
+          background-color: var(--card-bg);
+          border-radius: 10px;
+          padding: 2rem;
+          height: 100%;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .feature-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-icon {
+          color: var(--primary-color);
+          margin-bottom: 15px;
+        }
+        
+        .game-card {
+          background-color: var(--card-bg);
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+          height: 100%;
+          margin-bottom: 20px;
+        }
+
+        .game-image {
+          height: 200px;
+          position: relative;
+          background-color: var(--light-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+
+        .game-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .game-card:hover .game-overlay {
+          opacity: 1;
+        }
+
+        .coming-soon-badge {
+          background-color: var(--warning-color);
+          color: #000;
+          padding: 0.5rem 1rem;
+          border-radius: 30px;
+          font-weight: bold;
+          text-transform: uppercase;
+          font-size: 0.8rem;
+          letter-spacing: 1px;
+        }
+
+        .game-info {
+          padding: 1.5rem;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="casino-body">
+    <div class="casino-container">
+        <header class="casino-header">
+            <nav class="navbar navbar-expand-lg navbar-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="{{ url_for('home') }}">
+                        <i class="fas fa-dice me-2"></i>Xaxino Casino
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                            </li>
+                            {% if session.get('user_id') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('dice_game') }}">Dice Game</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('wallets') }}">My Wallets</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kyc') }}">KYC Verification</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <ul class="navbar-nav">
+                            {% if not session.get('user_id') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                            </li>
+                            {% else %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ session.get('username') }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li><a class="dropdown-item" href="#">My Profile</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main class="casino-content py-4">
+            <div class="container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+
+        <footer class="casino-footer text-center py-4">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h5>Xaxino Casino</h5>
+                        <p>The Ultimate Blockchain Casino Experience</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h5>Links</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="{{ url_for('home') }}">Home</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Responsible Gaming</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h5>Supported Cryptocurrencies</h5>
+                        <div class="crypto-icons">
+                            <i class="fab fa-bitcoin fa-2x mx-2" title="Bitcoin"></i>
+                            <i class="fab fa-ethereum fa-2x mx-2" title="Ethereum"></i>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <p>&copy; 2023 Xaxino Casino. All rights reserved.</p>
+                <p class="small">Provably fair gaming. Play responsibly.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
