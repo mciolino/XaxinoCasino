@@ -37,6 +37,7 @@ class User(db.Model):
     wallets = db.relationship('Wallet', backref='user', lazy=True)
     bets = db.relationship('DiceBet', backref='user', lazy=True)
     slot_bets = db.relationship('SlotBet', backref='user', lazy=True)
+    blackjack_games = db.relationship('BlackjackGame', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -76,6 +77,22 @@ class SlotBet(db.Model):
     server_seed_hash = db.Column(db.String(64), nullable=False)
     result_symbols = db.Column(db.String(64), nullable=False)  # Comma-separated symbols
     multiplier = db.Column(db.Float, nullable=False)
+    payout = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(10), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class BlackjackGame(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bet_amount = db.Column(db.Float, nullable=False)
+    client_seed = db.Column(db.String(64), nullable=False)
+    server_seed = db.Column(db.String(64), nullable=False)
+    server_seed_hash = db.Column(db.String(64), nullable=False)
+    player_hand = db.Column(db.String(128), nullable=False)  # Comma-separated cards
+    dealer_hand = db.Column(db.String(128), nullable=False)  # Comma-separated cards
+    player_score = db.Column(db.Integer, nullable=False)
+    dealer_score = db.Column(db.Integer, nullable=False)
+    game_status = db.Column(db.String(20), nullable=False)  # 'win', 'lose', 'push', 'blackjack'
     payout = db.Column(db.Float, default=0.0)
     currency = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -132,6 +149,119 @@ def evaluate_slot_symbols(symbols):
     
     # No matches
     return 0.0
+    
+def create_deck():
+    """Create a standard 52-card deck"""
+    suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+    values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    deck = [f"{value} of {suit}" for suit in suits for value in values]
+    return deck
+    
+def shuffle_deck(deck, seed):
+    """Deterministically shuffle the deck based on a seed"""
+    # Create a list of indices and sort them based on hash values
+    shuffled_deck = deck.copy()
+    indices = list(range(len(deck)))
+    
+    # Convert seed to a list of integers (deterministic shuffle)
+    seed_values = []
+    for i in range(0, len(seed), 8):
+        # Take 8 characters from seed and convert to integer
+        if i + 8 <= len(seed):
+            seed_values.append(int(seed[i:i+8], 16))
+        else:
+            seed_values.append(int(seed[i:], 16))
+    
+    # Shuffle indices based on seed values
+    for i in range(len(indices) - 1, 0, -1):
+        # Use seed_values[i % len(seed_values)] as a source of randomness
+        j = seed_values[i % len(seed_values)] % (i + 1)
+        indices[i], indices[j] = indices[j], indices[i]
+    
+    # Create new deck based on shuffled indices
+    for i in range(len(shuffled_deck)):
+        shuffled_deck[i] = deck[indices[i]]
+    
+    return shuffled_deck
+    
+def card_value(card):
+    """Get the numerical value of a card"""
+    # Extract the value part (e.g., "10 of Hearts" -> "10")
+    value = card.split(' of ')[0]
+    
+    # Face cards worth 10
+    if value in ['J', 'Q', 'K']:
+        return 10
+    # Ace is worth 11 initially (will be adjusted to 1 if needed)
+    elif value == 'A':
+        return 11
+    # Number cards worth their number
+    else:
+        return int(value)
+        
+def calculate_score(hand):
+    """Calculate the score of a blackjack hand, accounting for aces"""
+    score = 0
+    aces = 0
+    
+    for card in hand:
+        card_val = card_value(card)
+        if card_val == 11:  # It's an ace
+            aces += 1
+        score += card_val
+    
+    # Adjust aces if score is over 21
+    while score > 21 and aces > 0:
+        score -= 10  # Change an ace from 11 to 1
+        aces -= 1
+        
+    return score
+    
+def determine_winner(player_score, dealer_score, player_hand_length, dealer_hand_length):
+    """Determine the winner of a blackjack hand"""
+    
+    # Player busts
+    if player_score > 21:
+        return 'lose'
+        
+    # Dealer busts
+    if dealer_score > 21:
+        return 'win'
+        
+    # Player has blackjack
+    if player_score == 21 and player_hand_length == 2:
+        # Check if dealer also has blackjack
+        if dealer_score == 21 and dealer_hand_length == 2:
+            return 'push'  # Both have blackjack, it's a push
+        return 'blackjack'  # Player has blackjack, dealer doesn't
+        
+    # Compare scores
+    if player_score > dealer_score:
+        return 'win'
+    elif player_score < dealer_score:
+        return 'lose'
+    else:
+        return 'push'  # Scores are equal
+    
+def calculate_payout(game_status, bet_amount):
+    """Calculate payout based on game status"""
+    
+    payouts = {
+        'blackjack': 2.5,  # 3:2 payout for blackjack
+        'win': 2.0,        # 1:1 payout for win
+        'push': 1.0,       # Return bet for push
+        'lose': 0.0        # No payout for loss
+    }
+    
+    multiplier = payouts.get(game_status, 0.0)
+    return bet_amount * multiplier
+    
+def get_recent_blackjack_games():
+    """Get the user's recent blackjack games"""
+    if 'user_id' not in session:
+        return []
+    
+    return BlackjackGame.query.filter_by(user_id=session['user_id']).order_by(BlackjackGame.created_at.desc()).limit(10).all()
 
 def get_user_wallets():
     """Get current user's wallets or create them if they don't exist"""
@@ -286,6 +416,16 @@ def slots_game():
     
     return render_template('slots.html', wallets=wallets, recent_spins=recent_spins)
 
+@app.route('/games/blackjack')
+def blackjack_game():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    wallets = get_user_wallets()
+    recent_games = get_recent_blackjack_games()
+    
+    return render_template('blackjack.html', wallets=wallets, recent_games=recent_games)
+
 @app.route('/games/dice/play', methods=['POST'])
 def play_dice():
     if 'user_id' not in session:
@@ -430,6 +570,215 @@ def play_slots():
         'wallet_balance': wallet.balance,
         'is_win': is_win,
         'hash': hash_value[:16]  # Return part of the hash for verification
+    })
+
+@app.route('/games/blackjack/deal', methods=['POST'])
+def blackjack_deal():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    data = request.get_json()
+    bet_amount = float(data.get('bet_amount', 0))
+    client_seed = data.get('client_seed', '')
+    wallet_id = int(data.get('wallet_id', 0))
+    
+    wallet = Wallet.query.get(wallet_id)
+    
+    # Validate wallet and balance
+    if not wallet or wallet.user_id != session['user_id']:
+        return json.dumps({'error': 'Invalid wallet selected'})
+    
+    if wallet.balance < bet_amount:
+        return json.dumps({'error': 'Insufficient balance'})
+    
+    # Generate server seed and hash
+    server_seed = hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
+    server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+    
+    # Create and shuffle the deck
+    deck = create_deck()
+    shuffled_deck = shuffle_deck(deck, server_seed + client_seed)
+    
+    # Deal initial cards
+    player_hand = [shuffled_deck.pop(0), shuffled_deck.pop(0)]
+    dealer_hand = [shuffled_deck.pop(0), shuffled_deck.pop(0)]
+    
+    # Calculate scores
+    player_score = calculate_score(player_hand)
+    dealer_score = calculate_score(dealer_hand)
+    
+    # Check for blackjack
+    game_status = 'in_progress'
+    payout = 0.0
+    
+    # If player has blackjack, game ends immediately
+    if player_score == 21:
+        # Check if dealer also has blackjack
+        if dealer_score == 21:
+            game_status = 'push'
+            payout = bet_amount  # Return bet
+        else:
+            game_status = 'blackjack'
+            payout = bet_amount * 2.5  # 3:2 payout for blackjack
+            
+        # Update wallet balance for immediate result
+        wallet.balance -= bet_amount
+        wallet.balance += payout
+    else:
+        # Game continues, deduct bet from wallet
+        wallet.balance -= bet_amount
+    
+    # Create game record
+    game = BlackjackGame()
+    game.user_id = session['user_id']
+    game.bet_amount = bet_amount
+    game.client_seed = client_seed
+    game.server_seed = server_seed
+    game.server_seed_hash = server_seed_hash
+    game.player_hand = ','.join(player_hand)
+    game.dealer_hand = ','.join(dealer_hand)
+    game.player_score = player_score
+    game.dealer_score = dealer_score
+    game.game_status = game_status
+    game.payout = payout
+    game.currency = wallet.currency
+    
+    db.session.add(game)
+    db.session.commit()
+    
+    # Return initial game state
+    return json.dumps({
+        'game_id': game.id,
+        'bet_amount': game.bet_amount,
+        'player_hand': player_hand,
+        'dealer_hand': dealer_hand,
+        'dealer_hand_hidden': game_status == 'in_progress',  # Hide second card if game continues
+        'player_score': player_score,
+        'dealer_score': dealer_score if game_status != 'in_progress' else dealer_hand[0].split(' of ')[0],
+        'game_status': game_status,
+        'payout': payout,
+        'currency': wallet.currency,
+        'wallet_balance': wallet.balance
+    })
+
+@app.route('/games/blackjack/action', methods=['POST'])
+def blackjack_action():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    data = request.get_json()
+    game_id = int(data.get('game_id', 0))
+    action = data.get('action', '')  # 'hit', 'stand', 'double'
+    
+    # Find the game
+    game = BlackjackGame.query.get(game_id)
+    
+    # Validate game
+    if not game or game.user_id != session['user_id']:
+        return json.dumps({'error': 'Invalid game'})
+    
+    if game.game_status != 'in_progress':
+        return json.dumps({'error': 'Game is already complete'})
+    
+    # Get wallet
+    wallet = Wallet.query.filter_by(user_id=session['user_id'], currency=game.currency).first()
+    if not wallet:
+        return json.dumps({'error': 'Wallet not found'})
+    
+    # Convert stored hands back to arrays
+    player_hand = game.player_hand.split(',')
+    dealer_hand = game.dealer_hand.split(',')
+    
+    # Create and shuffle the deck again using the same seed
+    deck = create_deck()
+    shuffled_deck = shuffle_deck(deck, game.server_seed + game.client_seed)
+    
+    # Remove cards already dealt
+    for card in player_hand + dealer_hand:
+        shuffled_deck.remove(card)
+    
+    # Handle player's action
+    if action == 'hit':
+        # Deal another card to player
+        new_card = shuffled_deck.pop(0)
+        player_hand.append(new_card)
+        
+        # Update player score
+        player_score = calculate_score(player_hand)
+        game.player_score = player_score
+        
+        # Check if player busts
+        if player_score > 21:
+            game.game_status = 'lose'
+            game.payout = 0.0
+        else:
+            game.game_status = 'in_progress'
+            
+    elif action == 'stand':
+        # Dealer's turn
+        player_score = game.player_score
+        dealer_score = calculate_score(dealer_hand)
+        
+        # Dealer draws until 17 or higher
+        while dealer_score < 17:
+            new_card = shuffled_deck.pop(0)
+            dealer_hand.append(new_card)
+            dealer_score = calculate_score(dealer_hand)
+        
+        # Determine winner
+        game_status = determine_winner(player_score, dealer_score, len(player_hand), len(dealer_hand))
+        payout = calculate_payout(game_status, game.bet_amount)
+        
+        # Update game and wallet
+        game.game_status = game_status
+        game.dealer_score = dealer_score
+        game.payout = payout
+        
+        wallet.balance += payout
+        
+    elif action == 'double':
+        # Validate balance for double
+        if wallet.balance < game.bet_amount:
+            return json.dumps({'error': 'Insufficient balance to double'})
+        
+        # Double the bet
+        wallet.balance -= game.bet_amount
+        game.bet_amount *= 2
+        
+        # Deal one more card to player
+        new_card = shuffled_deck.pop(0)
+        player_hand.append(new_card)
+        
+        # Update player score
+        player_score = calculate_score(player_hand)
+        game.player_score = player_score
+        
+        # Check if player busts
+        if player_score > 21:
+            game.game_status = 'lose'
+            game.payout = 0.0
+        else:
+            # Player stands after doubling (dealer's turn handled after this response)
+            game.game_status = 'in_progress'
+    
+    # Update hands in database
+    game.player_hand = ','.join(player_hand)
+    game.dealer_hand = ','.join(dealer_hand)
+    
+    db.session.commit()
+    
+    # Return updated game state
+    return json.dumps({
+        'game_id': game.id,
+        'bet_amount': game.bet_amount,
+        'player_hand': player_hand,
+        'dealer_hand': dealer_hand,
+        'player_score': game.player_score,
+        'dealer_score': game.dealer_score,
+        'game_status': game.game_status,
+        'payout': game.payout,
+        'currency': game.currency,
+        'wallet_balance': wallet.balance
     })
 
 @app.route('/kyc')

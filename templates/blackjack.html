@@ -1,0 +1,914 @@
+{% extends 'base.html' %}
+
+{% block title %}Blackjack{% endblock %}
+
+{% block extra_css %}
+<style>
+    .blackjack-table {
+        background: linear-gradient(to bottom, #0b5e34, #0e8044);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .dealer-area, .player-area {
+        margin-bottom: 2rem;
+        border-radius: 10px;
+        padding: 1.5rem;
+        background-color: rgba(0, 0, 0, 0.15);
+        position: relative;
+    }
+
+    .hand-label {
+        position: absolute;
+        top: -10px;
+        left: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 0.25rem 1rem;
+        border-radius: 15px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .card-area {
+        display: flex;
+        justify-content: center;
+        min-height: 150px;
+        padding: 1rem 0;
+    }
+
+    .player-score, .dealer-score {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 0.25rem 1rem;
+        border-radius: 15px;
+        font-weight: bold;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .playing-card {
+        position: relative;
+        width: 100px;
+        height: 140px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        margin: 0 -20px;
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .playing-card:hover {
+        transform: translateY(-10px);
+        z-index: 10;
+    }
+
+    .card-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+
+    .card-suit {
+        font-size: 2rem;
+    }
+
+    .card-suit.red {
+        color: red;
+    }
+
+    .card-back {
+        background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+        border: 5px solid white;
+        border-radius: 5px;
+        position: relative;
+    }
+
+    .card-back:after {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: repeating-linear-gradient(45deg, #333, #333 10px, #444 10px, #444 20px);
+        border-radius: 3px;
+    }
+
+    .result-banner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        padding: 1.5rem 3rem;
+        border-radius: 10px;
+        text-align: center;
+        z-index: 100;
+        display: none;
+    }
+
+    .result-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .win-result {
+        color: #4caf50;
+    }
+
+    .lose-result {
+        color: #f44336;
+    }
+
+    .push-result {
+        color: #ff9800;
+    }
+
+    .blackjack-result {
+        color: #e91e63;
+    }
+
+    .result-payout {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-btn {
+        background-color: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        padding: 0.5rem 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .action-btn:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .hit-btn {
+        background-color: #4caf50;
+    }
+
+    .hit-btn:hover {
+        background-color: #45a049;
+    }
+
+    .stand-btn {
+        background-color: #f44336;
+    }
+
+    .stand-btn:hover {
+        background-color: #e53935;
+    }
+
+    .double-btn {
+        background-color: #ff9800;
+    }
+
+    .double-btn:hover {
+        background-color: #e68900;
+    }
+
+    .new-hand-btn {
+        background-color: #2196f3;
+    }
+
+    .new-hand-btn:hover {
+        background-color: #0b7dda;
+    }
+
+    .game-history {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    @keyframes dealCard {
+        0% {
+            transform: translateY(-100px) rotate(-10deg);
+            opacity: 0;
+        }
+        100% {
+            transform: translateY(0) rotate(0);
+            opacity: 1;
+        }
+    }
+
+    .deal-animation {
+        animation: dealCard 0.5s ease-out forwards;
+    }
+
+    .card-placeholder {
+        width: 100px;
+        height: 140px;
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+        border-radius: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.5);
+        margin: 0 5px;
+    }
+
+    .rules-card {
+        background-color: rgba(0, 0, 0, 0.7);
+        border: 1px solid var(--border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="blackjack-table" id="blackjackTable">
+                <div class="dealer-area">
+                    <div class="hand-label">Dealer's Hand</div>
+                    <div class="dealer-score" id="dealerScore">0</div>
+                    <div class="card-area" id="dealerCards">
+                        <div class="card-placeholder">
+                            <i class="fas fa-question"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="player-area">
+                    <div class="hand-label">Your Hand</div>
+                    <div class="player-score" id="playerScore">0</div>
+                    <div class="card-area" id="playerCards">
+                        <div class="card-placeholder">
+                            <i class="fas fa-question"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls" id="gameControls">
+                    <button class="btn btn-primary" id="dealBtn">Deal New Hand</button>
+                </div>
+                
+                <div class="result-banner" id="resultBanner">
+                    <div class="result-title" id="resultTitle">Win!</div>
+                    <div class="result-payout" id="resultPayout">+1.00 BTC</div>
+                    <button class="btn btn-primary new-hand-btn" id="newHandBtn">Play Again</button>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Place Your Bet</h4>
+                </div>
+                <div class="card-body">
+                    <form id="betForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="betAmount" class="form-label">Bet Amount</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="betAmount" step="0.00000001" min="0.00000001" required>
+                                    <select class="form-select" id="walletSelector" style="max-width: 100px;">
+                                        {% for wallet in wallets %}
+                                        <option value="{{ wallet.id }}" data-balance="{{ wallet.balance }}">{{ wallet.currency }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-text">
+                                    Balance: <span id="walletBalance">Loading...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="clientSeed" class="form-label">Client Seed <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="This seed is combined with the server seed to generate a provably fair shuffle"></i></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="clientSeed" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="generateSeedBtn">
+                                        <i class="fas fa-random"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="placeBetBtn">
+                                <i class="fas fa-play-circle"></i> Place Bet & Deal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card rules-card">
+                <div class="card-header">
+                    <h4>Blackjack Rules</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Game Objective</h5>
+                            <p>Beat the dealer by having a hand value closer to 21 without going over.</p>
+                            
+                            <h5>Card Values</h5>
+                            <ul>
+                                <li>Number cards (2-10): Face value</li>
+                                <li>Face cards (J, Q, K): 10 points</li>
+                                <li>Ace: 1 or 11 points (whichever benefits you)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Payouts</h5>
+                            <ul>
+                                <li>Blackjack (21 with first two cards): 3:2</li>
+                                <li>Regular win: 1:1</li>
+                                <li>Push (tie): Bet returned</li>
+                            </ul>
+                            
+                            <h5>Dealer Rules</h5>
+                            <p>The dealer must hit until they have 17 or higher, then stand.</p>
+                            
+                            <h5>Provably Fair</h5>
+                            <p>Our blackjack game uses a provably fair system that ensures the shuffle is random and verifiable.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Game History</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive game-history">
+                        <table class="table table-dark table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Bet</th>
+                                    <th>Result</th>
+                                    <th>Payout</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gameHistoryTable">
+                                {% if recent_games|length > 0 %}
+                                    {% for game in recent_games %}
+                                    <tr class="{{ 'text-success' if game.payout > game.bet_amount else 'text-danger' }}">
+                                        <td>{{ game.created_at.strftime('%H:%M:%S') }}</td>
+                                        <td>{{ "%.8f"|format(game.bet_amount) }} {{ game.currency }}</td>
+                                        <td>{{ game.game_status }}</td>
+                                        <td>{{ "%.8f"|format(game.payout) }} {{ game.currency }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No games yet</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4>Game Stats</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <div class="small text-muted">Hands Played</div>
+                            <div class="fs-5 fw-bold" id="totalGames">{{ recent_games|length }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Win Rate</div>
+                            <div class="fs-5 fw-bold" id="winRate">
+                                {% set win_count = 0 %}
+                                {% for game in recent_games %}
+                                    {% if game.payout > game.bet_amount %}
+                                        {% set win_count = win_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if recent_games|length > 0 %}
+                                    {{ (win_count / recent_games|length * 100)|round|int }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="small text-muted">Best Win</div>
+                            <div class="fs-5 fw-bold" id="bestWin">
+                                {% set best_win = 0 %}
+                                {% for game in recent_games %}
+                                    {% if game.payout > best_win %}
+                                        {% set best_win = game.payout %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ "%.8f"|format(best_win) }}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Wagered</div>
+                            <div class="fs-5 fw-bold" id="totalWagered">
+                                {% set total_wagered = 0 %}
+                                {% for game in recent_games %}
+                                    {% set total_wagered = total_wagered + game.bet_amount %}
+                                {% endfor %}
+                                {{ "%.8f"|format(total_wagered) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const betForm = document.getElementById('betForm');
+    const placeBetBtn = document.getElementById('placeBetBtn');
+    const betAmount = document.getElementById('betAmount');
+    const clientSeed = document.getElementById('clientSeed');
+    const walletSelector = document.getElementById('walletSelector');
+    const walletBalance = document.getElementById('walletBalance');
+    const generateSeedBtn = document.getElementById('generateSeedBtn');
+    
+    const blackjackTable = document.getElementById('blackjackTable');
+    const dealerCards = document.getElementById('dealerCards');
+    const playerCards = document.getElementById('playerCards');
+    const dealerScore = document.getElementById('dealerScore');
+    const playerScore = document.getElementById('playerScore');
+    const gameControls = document.getElementById('gameControls');
+    const resultBanner = document.getElementById('resultBanner');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultPayout = document.getElementById('resultPayout');
+    const newHandBtn = document.getElementById('newHandBtn');
+    const gameHistoryTable = document.getElementById('gameHistoryTable');
+    
+    // Game state
+    let currentWallet = null;
+    let currentBalance = 0;
+    let currentBetAmount = 0;
+    let currentCurrency = '';
+    let gameInProgress = false;
+    let playerHandValue = 0;
+    let dealerHandValue = 0;
+    
+    // Card suits and values
+    const suits = {
+        'Spades': '♠',
+        'Hearts': '♥',
+        'Diamonds': '♦',
+        'Clubs': '♣'
+    };
+    
+    // Initialize
+    function init() {
+        // Generate random seed
+        clientSeed.value = generateRandomString();
+        
+        // Set initial wallet
+        if (walletSelector.options.length > 0) {
+            currentWallet = walletSelector.options[0].value;
+            currentBalance = parseFloat(walletSelector.options[0].dataset.balance);
+            updateBalanceDisplay();
+        }
+        
+        // Set events
+        betForm.addEventListener('submit', handleBetSubmit);
+        generateSeedBtn.addEventListener('click', handleGenerateSeed);
+        walletSelector.addEventListener('change', handleWalletChange);
+        newHandBtn.addEventListener('click', resetGame);
+    }
+    
+    // Handle bet form submission
+    async function handleBetSubmit(e) {
+        e.preventDefault();
+        
+        if (gameInProgress) return;
+        
+        // Validate bet amount
+        const amount = parseFloat(betAmount.value);
+        if (isNaN(amount) || amount <= 0 || amount > currentBalance) {
+            showError('Invalid bet amount');
+            return;
+        }
+        
+        // Store current bet info
+        currentBetAmount = amount;
+        currentCurrency = walletSelector.options[walletSelector.selectedIndex].text;
+        
+        // Disable form during game
+        setFormState(false);
+        gameInProgress = true;
+        
+        try {
+            // Start new blackjack game
+            const response = await fetch('/games/blackjack/deal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bet_amount: amount,
+                    client_seed: clientSeed.value,
+                    wallet_id: currentWallet
+                })
+            });
+            
+            const data = JSON.parse(await response.text());
+            
+            if (data.error) {
+                showError(data.error);
+                resetGame();
+                return;
+            }
+            
+            // Update balance
+            currentBalance = data.wallet_balance;
+            updateBalanceDisplay();
+            
+            // Display initial cards
+            resetTable();
+            renderHands(data.player_hand, data.dealer_hand, data.dealer_hand_hidden);
+            
+            // Update scores
+            playerHandValue = data.player_score;
+            dealerHandValue = data.dealer_score;
+            playerScore.textContent = playerHandValue;
+            dealerScore.textContent = '?'; // Hide dealer's full score initially
+            
+            // Set up game controls
+            if (data.game_status === 'blackjack' || data.game_status === 'win' || 
+                data.game_status === 'lose' || data.game_status === 'push') {
+                // Game already completed (e.g., player got blackjack)
+                showGameResult(data);
+            } else {
+                // Game in progress, show action buttons
+                setupGameControls(data.game_id);
+            }
+            
+            // Update stats and history
+            updateGameStats(data);
+            updateGameHistory(data);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError('An error occurred while starting the game');
+            resetGame();
+        }
+    }
+    
+    // Render player and dealer hands
+    function renderHands(playerHand, dealerHand, dealerHidden) {
+        // Clear card areas
+        playerCards.innerHTML = '';
+        dealerCards.innerHTML = '';
+        
+        // Render player cards
+        playerHand.forEach((card, index) => {
+            const cardEl = createCardElement(card);
+            cardEl.style.animationDelay = `${index * 0.2}s`;
+            cardEl.classList.add('deal-animation');
+            playerCards.appendChild(cardEl);
+        });
+        
+        // Render dealer cards
+        dealerHand.forEach((card, index) => {
+            let cardEl;
+            if (index === 1 && dealerHidden) {
+                // Hidden card
+                cardEl = document.createElement('div');
+                cardEl.className = 'playing-card card-back';
+            } else {
+                cardEl = createCardElement(card);
+            }
+            cardEl.style.animationDelay = `${(playerHand.length + index) * 0.2}s`;
+            cardEl.classList.add('deal-animation');
+            dealerCards.appendChild(cardEl);
+        });
+    }
+    
+    // Create a card element
+    function createCardElement(card) {
+        const [value, suitName] = card.split(' of ');
+        const suit = suits[suitName];
+        
+        const cardEl = document.createElement('div');
+        cardEl.className = 'playing-card';
+        
+        const valueEl = document.createElement('div');
+        valueEl.className = 'card-value';
+        valueEl.textContent = value;
+        
+        const suitEl = document.createElement('div');
+        suitEl.className = 'card-suit';
+        if (suitName === 'Hearts' || suitName === 'Diamonds') {
+            suitEl.classList.add('red');
+        }
+        suitEl.textContent = suit;
+        
+        cardEl.appendChild(valueEl);
+        cardEl.appendChild(suitEl);
+        
+        return cardEl;
+    }
+    
+    // Set up game action controls
+    function setupGameControls(gameId) {
+        gameControls.innerHTML = `
+            <button class="btn btn-success me-2 hit-btn" id="hitBtn">Hit</button>
+            <button class="btn btn-danger me-2 stand-btn" id="standBtn">Stand</button>
+            <button class="btn btn-warning double-btn" id="doubleBtn">Double</button>
+        `;
+        
+        // Add event listeners
+        document.getElementById('hitBtn').addEventListener('click', () => handleAction('hit', gameId));
+        document.getElementById('standBtn').addEventListener('click', () => handleAction('stand', gameId));
+        document.getElementById('doubleBtn').addEventListener('click', () => handleAction('double', gameId));
+        
+        // Disable double if balance is insufficient
+        if (currentBalance < currentBetAmount) {
+            document.getElementById('doubleBtn').disabled = true;
+        }
+    }
+    
+    // Handle player actions (hit, stand, double)
+    async function handleAction(action, gameId) {
+        // Disable controls during action
+        const buttons = gameControls.querySelectorAll('button');
+        buttons.forEach(btn => btn.disabled = true);
+        
+        try {
+            const response = await fetch('/games/blackjack/action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    game_id: gameId,
+                    action: action
+                })
+            });
+            
+            const data = JSON.parse(await response.text());
+            
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+            
+            // Update balance if needed
+            if (action === 'double') {
+                currentBalance = data.wallet_balance;
+                updateBalanceDisplay();
+            }
+            
+            // Update cards and score
+            renderHands(data.player_hand, data.dealer_hand, false);
+            playerHandValue = data.player_score;
+            dealerHandValue = data.dealer_score;
+            playerScore.textContent = playerHandValue;
+            dealerScore.textContent = dealerHandValue;
+            
+            // Check if game is over
+            if (data.game_status === 'win' || data.game_status === 'lose' || 
+                data.game_status === 'push' || data.game_status === 'blackjack') {
+                // Game completed
+                showGameResult(data);
+                
+                // Update stats and history
+                updateGameStats(data);
+                updateGameHistory(data);
+                
+                // Update final balance
+                currentBalance = data.wallet_balance;
+                updateBalanceDisplay();
+            } else {
+                // Game still in progress, re-enable controls
+                buttons.forEach(btn => btn.disabled = false);
+                
+                // If we just doubled, automatically stand
+                if (action === 'double') {
+                    // Small delay before automatic stand
+                    setTimeout(() => {
+                        handleAction('stand', gameId);
+                    }, 500);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError('An error occurred while performing the action');
+            buttons.forEach(btn => btn.disabled = false);
+        }
+    }
+    
+    // Show game result banner
+    function showGameResult(data) {
+        // Set up the result banner
+        let resultClass = '';
+        let resultText = '';
+        
+        switch(data.game_status) {
+            case 'blackjack':
+                resultClass = 'blackjack-result';
+                resultText = 'BLACKJACK!';
+                break;
+            case 'win':
+                resultClass = 'win-result';
+                resultText = 'You Win!';
+                break;
+            case 'lose':
+                resultClass = 'lose-result';
+                resultText = 'Dealer Wins';
+                break;
+            case 'push':
+                resultClass = 'push-result';
+                resultText = 'Push';
+                break;
+        }
+        
+        resultTitle.textContent = resultText;
+        resultTitle.className = 'result-title ' + resultClass;
+        
+        if (data.payout > 0) {
+            resultPayout.textContent = `+${data.payout.toFixed(8)} ${data.currency}`;
+            resultPayout.style.color = '#4caf50';
+        } else {
+            resultPayout.textContent = `-${data.bet_amount.toFixed(8)} ${data.currency}`;
+            resultPayout.style.color = '#f44336';
+        }
+        
+        // Show the banner
+        resultBanner.style.display = 'block';
+        
+        // Clear game controls
+        gameControls.innerHTML = '';
+    }
+    
+    // Reset the game table
+    function resetTable() {
+        playerCards.innerHTML = '';
+        dealerCards.innerHTML = '';
+        playerScore.textContent = '0';
+        dealerScore.textContent = '0';
+        resultBanner.style.display = 'none';
+        gameControls.innerHTML = '';
+    }
+    
+    // Reset the game state
+    function resetGame() {
+        gameInProgress = false;
+        playerHandValue = 0;
+        dealerHandValue = 0;
+        resetTable();
+        setFormState(true);
+    }
+    
+    // Update game history table
+    function updateGameHistory(data) {
+        const row = document.createElement('tr');
+        row.className = data.payout > data.bet_amount ? 'text-success' : 'text-danger';
+        
+        const date = new Date();
+        const time = date.toLocaleTimeString('en-US', { hour12: false });
+        
+        row.innerHTML = `
+            <td>${time}</td>
+            <td>${data.bet_amount.toFixed(8)} ${data.currency}</td>
+            <td>${data.game_status}</td>
+            <td>${data.payout.toFixed(8)} ${data.currency}</td>
+        `;
+        
+        // Add to top of table
+        const emptyRow = gameHistoryTable.querySelector('td[colspan="4"]');
+        if (emptyRow) {
+            gameHistoryTable.innerHTML = '';
+        }
+        
+        gameHistoryTable.insertBefore(row, gameHistoryTable.firstChild);
+        
+        // Limit to 10 rows
+        const rows = gameHistoryTable.querySelectorAll('tr');
+        if (rows.length > 10) {
+            gameHistoryTable.removeChild(rows[rows.length - 1]);
+        }
+    }
+    
+    // Update game stats
+    function updateGameStats(data) {
+        const totalGamesEl = document.getElementById('totalGames');
+        const winRateEl = document.getElementById('winRate');
+        const bestWinEl = document.getElementById('bestWin');
+        const totalWageredEl = document.getElementById('totalWagered');
+        
+        // Update totals
+        const currentTotal = parseInt(totalGamesEl.textContent) || 0;
+        totalGamesEl.textContent = currentTotal + 1;
+        
+        // Update win rate
+        const isWin = data.game_status === 'win' || data.game_status === 'blackjack';
+        const currentWins = parseInt(winRateEl.textContent) || 0;
+        const newWinRate = Math.round((currentWins + (isWin ? 1 : 0)) / (currentTotal + 1) * 100);
+        winRateEl.textContent = `${newWinRate}%`;
+        
+        // Update best win
+        const currentBestWin = parseFloat(bestWinEl.textContent) || 0;
+        if (data.payout > currentBestWin) {
+            bestWinEl.textContent = data.payout.toFixed(8);
+        }
+        
+        // Update total wagered
+        const currentWagered = parseFloat(totalWageredEl.textContent) || 0;
+        totalWageredEl.textContent = (currentWagered + data.bet_amount).toFixed(8);
+    }
+    
+    // Generate a random seed
+    function generateRandomString(length = 16) {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+    
+    // Handle generate seed button click
+    function handleGenerateSeed() {
+        clientSeed.value = generateRandomString();
+    }
+    
+    // Handle wallet change
+    function handleWalletChange() {
+        const selectedOption = walletSelector.options[walletSelector.selectedIndex];
+        currentWallet = selectedOption.value;
+        currentBalance = parseFloat(selectedOption.dataset.balance);
+        updateBalanceDisplay();
+    }
+    
+    // Update balance display
+    function updateBalanceDisplay() {
+        if (currentBalance !== null) {
+            const currency = walletSelector.options[walletSelector.selectedIndex].text;
+            walletBalance.textContent = `${currentBalance.toFixed(8)} ${currency}`;
+        } else {
+            walletBalance.textContent = 'No wallet selected';
+        }
+    }
+    
+    // Show error message
+    function showError(message) {
+        alert(message);
+    }
+    
+    // Enable/disable form during game
+    function setFormState(enabled) {
+        betAmount.disabled = !enabled;
+        clientSeed.disabled = !enabled;
+        walletSelector.disabled = !enabled;
+        placeBetBtn.disabled = !enabled;
+        
+        if (!enabled) {
+            placeBetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting Game...';
+        } else {
+            placeBetBtn.innerHTML = '<i class="fas fa-play-circle"></i> Place Bet & Deal';
+        }
+    }
+    
+    // Initialize
+    init();
+});
+</script>
+{% endblock %}

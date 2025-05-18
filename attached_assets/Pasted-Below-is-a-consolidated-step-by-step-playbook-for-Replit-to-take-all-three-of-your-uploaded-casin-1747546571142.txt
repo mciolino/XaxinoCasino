@@ -1,0 +1,164 @@
+Below is a consolidated, step-by-step “playbook” for Replit to take all three of your uploaded casino platforms—the Xaxino Ultimate Casino, BrixCasino, and CryptoCasino—and spin up fully-working deployments for each. You can use one Repl per project (recommended), or turn this into a single monorepo with a multi‐service run.sh (advanced).
+
+⸻
+
+1. Common Prerequisites
+
+In each Repl’s Shell, first install system dependencies:
+
+# Install PHP & Composer, Node.js & npm, MySQL, Solidity compiler
+apt update && apt install -y \
+  php php-mbstring php-xml php-bcmath php-curl php-zip \
+  unzip curl composer mysql-server nodejs npm solc
+
+
+⸻
+
+2. Xaxino Ultimate Casino (PHP/Laravel)
+	1.	Upload
+– codecanyon-9AqnPTKm-xaxino-ultimate-casino-platform.zip into your Repl.
+	2.	Unzip & cd in
+
+unzip codecanyon-9AqnPTKm-xaxino-ultimate-casino-platform.zip -d xaxino
+cd xaxino/Files/core
+
+
+	3.	Install dependencies
+
+composer install
+npm install
+npm run build       # or npm run dev if you’re in development
+
+
+	4.	Environment
+
+cp .env.example .env
+php artisan key:generate
+
+Then in Replit Secrets, add your MySQL creds:
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=xaxino
+DB_USERNAME=root
+DB_PASSWORD=<your_mysql_password>
+
+
+	5.	Migrations & Seed
+
+php artisan migrate --seed
+
+
+	6.	Launch
+Create a run.sh at project root:
+
+#!/bin/bash
+cd xaxino/Files/core
+php artisan serve --host=0.0.0.0 --port=3000
+
+Make it executable: chmod +x run.sh
+And in .replit:
+
+run = "bash run.sh"
+language = "php"
+
+
+
+⸻
+
+3. BrixCasino-Script (PHP/Laravel)
+	1.	Upload
+– BrixCasino-Script-main.zip into a new Repl.
+	2.	Unzip & cd in
+
+unzip BrixCasino-Script-main.zip -d brix
+cd brix/BrixCasino-Script-main
+
+
+	3.	Install dependencies
+
+composer install
+npm install
+npm run dev        # or npm run prod
+
+
+	4.	Environment
+
+cp .env.example .env
+php artisan key:generate
+
+Add your DB secrets in Replit’s Secret panel (same keys as above, DB_DATABASE=brix, etc.).
+
+	5.	Migrations & Seed
+
+php artisan migrate --seed
+
+
+	6.	Launch
+run.sh:
+
+#!/bin/bash
+cd brix/BrixCasino-Script-main
+php artisan serve --host=0.0.0.0 --port=3001
+
+.replit:
+
+run = "bash run.sh"
+language = "php"
+
+
+
+⸻
+
+4. CryptoCasino (Node.js/TypeScript + Vite + Drizzle)
+	1.	Upload
+– CryptoCasino.zip into its own Repl.
+	2.	Unzip & cd in
+
+unzip CryptoCasino.zip -d crypto
+cd crypto/CryptoCasino
+
+
+	3.	Install dependencies
+
+npm install
+
+
+	4.	Database migrations (Drizzle / Neon)
+
+npx drizzle-kit push   # or `db:push` if script defined
+
+
+	5.	Environment
+Copy .env.example (if provided) or create a new .env with your Neon/Postgres URL and any API keys.
+	6.	Launch
+In run.sh:
+
+#!/bin/bash
+cd crypto/CryptoCasino
+# 1) start TypeScript server (Express + REST API)
+npm run dev  # this will spin up both Vite frontend & server via tsx
+
+In .replit:
+
+run = "bash run.sh"
+language = "nodejs"
+
+
+
+⸻
+
+5. Final Checklist
+	•	✅ Secrets panel populated for each Repl (DB, ETH_PROVIDER, ETH keys, Stripe/PayPal, GA_ID).
+	•	✅ run.sh scripts are executable (chmod +x run.sh).
+	•	✅ .replit files point to the correct run.sh.
+	•	✅ Ports don’t conflict (3000, 3001, etc.).
+	•	✅ Migrations & seeds have run.
+	•	✅ A test user + admin user exist for each platform.
+
+Once you hit Run in each Repl, you should see:
+	•	Xaxino live at https://<repl-name>.username.repl.co (port 3000)
+	•	BrixCasino at port 3001
+	•	CryptoCasino on its default HTTP port (as configured, usually 3000 within that Repl)
+
+You now have three independent, fully-deployed casino backends—pick and integrate whichever game engines you like, or keep them running side-by-side for testing and feature comparison.
