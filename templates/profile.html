@@ -1,0 +1,683 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .profile-header-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        z-index: 0;
+    }
+    
+    .profile-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(to bottom right, #6a11cb, #2575fc);
+        border-radius: 50%;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+    
+    .nav-pills .nav-link {
+        color: var(--text-muted);
+        background-color: transparent;
+        border-radius: 5px;
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .nav-pills .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-pills .nav-link.active {
+        color: white;
+        background-color: var(--primary-color);
+    }
+    
+    .tab-content {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+    }
+    
+    .profile-stat {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .profile-stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .profile-stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    
+    .activity-timeline {
+        position: relative;
+        padding-left: 40px;
+        margin-bottom: 2rem;
+    }
+    
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 10px;
+        width: 2px;
+        background-color: var(--border-color);
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: -40px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        top: 0;
+    }
+    
+    .timeline-content {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .timeline-date {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+    }
+    
+    .deposit-limit-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .limit-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .limit-progress {
+        height: 8px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress {
+        background-color: var(--border-color);
+    }
+    
+    .self-exclusion-toggle {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="profile-header">
+        <div class="profile-header-bg"></div>
+        <div class="profile-content">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="profile-avatar">
+                            {{ user.username[0].upper() }}
+                        </div>
+                        <div class="ms-3">
+                            <h2 class="mb-1">{{ user.username }}</h2>
+                            <p class="mb-1">{{ user.email }}</p>
+                            <span class="badge {% if user.kyc_status == 'verified' %}bg-success{% elif user.kyc_status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ user.kyc_status.capitalize() }}
+                            </span>
+                            <span class="badge bg-primary ms-1">
+                                {% if user.is_admin() %}Admin{% else %}Player{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-center justify-content-end">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light">
+                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active" id="v-pills-overview-tab" data-bs-toggle="pill" data-bs-target="#v-pills-overview" type="button" role="tab" aria-controls="v-pills-overview" aria-selected="true">
+                    <i class="fas fa-chart-line me-2"></i> Overview
+                </button>
+                <button class="nav-link" id="v-pills-security-tab" data-bs-toggle="pill" data-bs-target="#v-pills-security" type="button" role="tab" aria-controls="v-pills-security" aria-selected="false">
+                    <i class="fas fa-shield-alt me-2"></i> Security & KYC
+                </button>
+                <button class="nav-link" id="v-pills-activity-tab" data-bs-toggle="pill" data-bs-target="#v-pills-activity" type="button" role="tab" aria-controls="v-pills-activity" aria-selected="false">
+                    <i class="fas fa-history me-2"></i> Activity Log
+                </button>
+                <button class="nav-link" id="v-pills-responsible-tab" data-bs-toggle="pill" data-bs-target="#v-pills-responsible" type="button" role="tab" aria-controls="v-pills-responsible" aria-selected="false">
+                    <i class="fas fa-hand-holding-heart me-2"></i> Responsible Gaming
+                </button>
+                <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i> Settings
+                </button>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="tab-content" id="v-pills-tabContent">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="v-pills-overview" role="tabpanel" aria-labelledby="v-pills-overview-tab">
+                    <h3 class="mb-4">Account Overview</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">{{ total_bets }}</div>
+                                <div class="profile-stat-label">Total Wagers</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">{{ total_wins }}</div>
+                                <div class="profile-stat-label">Total Wins</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">
+                                    {% if total_bets > 0 %}
+                                        {{ (total_wins / total_bets * 100)|round|int }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </div>
+                                <div class="profile-stat-label">Win Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-5 mb-3">Your Wallets</h4>
+                    <div class="row">
+                        {% for wallet in wallets %}
+                        <div class="col-md-6">
+                            <div class="wallet-card">
+                                <div class="wallet-card-header">
+                                    <div class="wallet-icon">
+                                        {% if wallet.currency == 'BTC' %}
+                                        <i class="fab fa-bitcoin btc"></i>
+                                        {% elif wallet.currency == 'ETH' %}
+                                        <i class="fab fa-ethereum eth"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="wallet-title">
+                                        <h3>{{ wallet.currency }} Wallet</h3>
+                                        <div class="wallet-balance">
+                                            {% if wallet.currency == 'BTC' %}₿{% elif wallet.currency == 'ETH' %}Ξ{% endif %} {{ "%.8f"|format(wallet.balance) }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="wallet-card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Wallet Address</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" value="{{ wallet.address }}" readonly>
+                                            <button class="btn btn-outline-secondary copy-btn" type="button" data-clipboard-text="{{ wallet.address }}">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex">
+                                        <a href="{{ url_for('deposit', currency=wallet.currency) }}" class="btn btn-success me-2">
+                                            <i class="fas fa-arrow-down me-1"></i> Deposit
+                                        </a>
+                                        <a href="{{ url_for('withdraw', currency=wallet.currency) }}" class="btn btn-primary">
+                                            <i class="fas fa-arrow-up me-1"></i> Withdraw
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Security & KYC Tab -->
+                <div class="tab-pane fade" id="v-pills-security" role="tabpanel" aria-labelledby="v-pills-security-tab">
+                    <h3 class="mb-4">Security & KYC</h3>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Two-Factor Authentication</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-0">Protect your account with an extra layer of security.</p>
+                                    <small class="text-muted">We recommend using Google Authenticator.</small>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="twoFactorToggle" {% if user.google2fa_secret %}checked{% endif %}>
+                                    <label class="form-check-label" for="twoFactorToggle">
+                                        {% if user.google2fa_secret %}Enabled{% else %}Disabled{% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            {% if not user.google2fa_secret %}
+                            <div class="mt-3 d-none" id="setup2fa">
+                                <div class="alert alert-info">
+                                    <h5>Set up Google Authenticator</h5>
+                                    <p>Scan this QR code with your Google Authenticator app, then enter the code below.</p>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 text-center">
+                                        <div class="mb-3">
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?data=otpauth://totp/Xaxino:{{ user.email }}&size=200x200" alt="QR Code" class="img-fluid">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="authCode" class="form-label">Authentication Code</label>
+                                            <input type="text" class="form-control" id="authCode" placeholder="Enter 6-digit code">
+                                        </div>
+                                        <button type="button" class="btn btn-primary">Verify & Enable</button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">KYC Verification</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if user.kyc_status == 'verified' %}
+                                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle"></i></span>
+                                    {% elif user.kyc_status == 'pending' %}
+                                    <span class="badge bg-warning text-dark fs-6"><i class="fas fa-clock"></i></span>
+                                    {% else %}
+                                    <span class="badge bg-secondary fs-6"><i class="fas fa-times-circle"></i></span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">
+                                        Status: {{ user.kyc_status.capitalize() }}
+                                    </h5>
+                                    <p class="mb-0">
+                                        {% if user.kyc_status == 'verified' %}
+                                        Your identity has been verified. You have full access to all features.
+                                        {% elif user.kyc_status == 'pending' %}
+                                        Your verification is in progress. This usually takes 24-48 hours.
+                                        {% else %}
+                                        Please complete verification to unlock withdrawals over 1 BTC.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {% if user.kyc_status != 'verified' %}
+                            <div class="mt-3">
+                                <a href="{{ url_for('kyc') }}" class="btn btn-primary">
+                                    {% if user.kyc_status == 'pending' %}
+                                    Check Status
+                                    {% else %}
+                                    Complete Verification
+                                    {% endif %}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Password Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form>
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="currentPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="newPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Password</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Activity Log Tab -->
+                <div class="tab-pane fade" id="v-pills-activity" role="tabpanel" aria-labelledby="v-pills-activity-tab">
+                    <h3 class="mb-4">Activity Log</h3>
+                    
+                    <div class="activity-timeline">
+                        {% for activity in activities %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ activity.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                                <div class="timeline-title">{{ activity.activity_type }}</div>
+                                <div class="timeline-details">{{ activity.details }}</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="fas fa-history fa-3x text-muted"></i>
+                            </div>
+                            <h5>No Activity Yet</h5>
+                            <p>Your account activities will be shown here.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Responsible Gaming Tab -->
+                <div class="tab-pane fade" id="v-pills-responsible" role="tabpanel" aria-labelledby="v-pills-responsible-tab">
+                    <h3 class="mb-4">Responsible Gaming</h3>
+                    
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">Play Responsibly</h5>
+                        <p>We're committed to promoting responsible gambling. Use these tools to help manage your gameplay.</p>
+                    </div>
+                    
+                    <h4 class="mb-3">Deposit Limits</h4>
+                    <div class="deposit-limit-card">
+                        <div class="limit-title">
+                            <h5 class="mb-0">Daily Deposit Limit</h5>
+                            <button type="button" class="btn btn-sm btn-outline-light">Edit</button>
+                        </div>
+                        <div class="progress limit-progress">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>0.25 BTC used</span>
+                            <span>1.00 BTC limit</span>
+                        </div>
+                    </div>
+                    
+                    <div class="deposit-limit-card">
+                        <div class="limit-title">
+                            <h5 class="mb-0">Weekly Deposit Limit</h5>
+                            <button type="button" class="btn btn-sm btn-outline-light">Edit</button>
+                        </div>
+                        <div class="progress limit-progress">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>3.25 BTC used</span>
+                            <span>5.00 BTC limit</span>
+                        </div>
+                    </div>
+                    
+                    <div class="deposit-limit-card">
+                        <div class="limit-title">
+                            <h5 class="mb-0">Monthly Deposit Limit</h5>
+                            <button type="button" class="btn btn-sm btn-outline-light">Edit</button>
+                        </div>
+                        <div class="progress limit-progress">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>8.5 BTC used</span>
+                            <span>10.0 BTC limit</span>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3">Session Limits</h4>
+                    <div class="deposit-limit-card">
+                        <div class="limit-title">
+                            <h5 class="mb-0">Session Time Reminder</h5>
+                            <button type="button" class="btn btn-sm btn-outline-light">Edit</button>
+                        </div>
+                        <p>You'll receive a notification after playing for:</p>
+                        <div class="d-flex align-items-center">
+                            <select class="form-select">
+                                <option>30 minutes</option>
+                                <option selected>1 hour</option>
+                                <option>2 hours</option>
+                                <option>3 hours</option>
+                                <option>4 hours</option>
+                            </select>
+                            <button type="button" class="btn btn-primary ms-3">Save</button>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3">Self-Exclusion</h4>
+                    <div class="self-exclusion-toggle">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">Temporary Self-Exclusion</h5>
+                                <p class="mb-0">Take a break from gambling for a specified period</p>
+                            </div>
+                            <button type="button" class="btn btn-warning">Set Break</button>
+                        </div>
+                    </div>
+                    
+                    <div class="self-exclusion-toggle">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">Permanent Self-Exclusion</h5>
+                                <p class="mb-0">Close your account and self-exclude permanently</p>
+                            </div>
+                            <button type="button" class="btn btn-danger">Close Account</button>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3">Support Resources</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            <p>If you're concerned about your gambling habits, these organizations can help:</p>
+                            <ul>
+                                <li><a href="https://www.begambleaware.org/" target="_blank">BeGambleAware</a></li>
+                                <li><a href="https://www.gamcare.org.uk/" target="_blank">GamCare</a></li>
+                                <li><a href="https://www.gamblingtherapy.org/" target="_blank">Gambling Therapy</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Tab -->
+                <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">
+                    <h3 class="mb-4">Account Settings</h3>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Profile Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <form>
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" value="{{ user.username }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" value="{{ user.email }}">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Communication Preferences</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="emailPromos" checked>
+                                <label class="form-check-label" for="emailPromos">
+                                    Promotional emails
+                                </label>
+                                <div class="form-text">Receive offers, bonuses, and special promotions</div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="emailUpdates" checked>
+                                <label class="form-check-label" for="emailUpdates">
+                                    Game updates and news
+                                </label>
+                                <div class="form-text">Stay informed about new games and features</div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="emailSecurity" checked>
+                                <label class="form-check-label" for="emailSecurity">
+                                    Security alerts
+                                </label>
+                                <div class="form-text">Receive notifications about account security</div>
+                            </div>
+                            <button type="button" class="btn btn-primary">Save Preferences</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Account Deletion</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-3">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="fas fa-trash-alt me-2"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Warning: This action cannot be undone!
+                </div>
+                <p>Are you sure you want to permanently delete your account? All your data, including wallet information and betting history, will be deleted.</p>
+                <div class="mb-3">
+                    <label for="deleteConfirm" class="form-label">Type "DELETE" to confirm</label>
+                    <input type="text" class="form-control" id="deleteConfirm">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize clipboard.js
+        new ClipboardJS('.copy-btn');
+        
+        // Add tooltip functionality for copy buttons
+        const copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i>';
+                
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+        
+        // 2FA toggle
+        const twoFactorToggle = document.getElementById('twoFactorToggle');
+        const setup2fa = document.getElementById('setup2fa');
+        
+        if (twoFactorToggle && setup2fa) {
+            twoFactorToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    setup2fa.classList.remove('d-none');
+                } else {
+                    setup2fa.classList.add('d-none');
+                }
+            });
+        }
+        
+        // Delete account confirmation
+        const deleteConfirmInput = document.getElementById('deleteConfirm');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (deleteConfirmInput && confirmDeleteBtn) {
+            deleteConfirmInput.addEventListener('input', function() {
+                confirmDeleteBtn.disabled = this.value !== 'DELETE';
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -6,7 +6,7 @@ import json
 import uuid
 import hashlib
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Create the app
 app = Flask(__name__)
@@ -38,6 +38,8 @@ class User(db.Model):
     bets = db.relationship('DiceBet', backref='user', lazy=True)
     slot_bets = db.relationship('SlotBet', backref='user', lazy=True)
     blackjack_games = db.relationship('BlackjackGame', backref='user', lazy=True)
+    responsible_gaming = db.relationship('ResponsibleGaming', backref='user', uselist=False, lazy=True)
+    deposit_periods = db.relationship('DepositLimitPeriod', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -105,6 +107,26 @@ class KycDocument(db.Model):
     status = db.Column(db.String(20), default='pending')
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class ResponsibleGaming(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    daily_deposit_limit = db.Column(db.Float, default=1.0)  # BTC
+    weekly_deposit_limit = db.Column(db.Float, default=5.0)  # BTC
+    monthly_deposit_limit = db.Column(db.Float, default=10.0)  # BTC
+    session_reminder = db.Column(db.Integer, default=60)  # Minutes
+    self_exclusion_until = db.Column(db.DateTime, nullable=True)
+    is_permanently_excluded = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+class DepositLimitPeriod(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    period_type = db.Column(db.String(10), nullable=False)  # 'daily', 'weekly', 'monthly'
+    start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    end_date = db.Column(db.DateTime, nullable=False)
+    total_deposited = db.Column(db.Float, default=0.0)  # BTC
 
 # Helper functions
 def generate_wallet_address(currency):
@@ -793,6 +815,43 @@ def kyc():
     documents = KycDocument.query.filter_by(user_id=user.id).all()
     
     return render_template('kyc.html', user=user, documents=documents)
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('logout'))
+    
+    wallets = get_user_wallets()
+    
+    # Count total bets and wins for stats
+    dice_bets = DiceBet.query.filter_by(user_id=user.id).all()
+    slot_bets = SlotBet.query.filter_by(user_id=user.id).all()
+    blackjack_games = BlackjackGame.query.filter_by(user_id=user.id).all()
+    
+    total_bets = len(dice_bets) + len(slot_bets) + len(blackjack_games)
+    
+    # Count wins
+    dice_wins = sum(1 for bet in dice_bets if bet.payout > bet.bet_amount)
+    slot_wins = sum(1 for bet in slot_bets if bet.payout > bet.bet_amount)
+    blackjack_wins = sum(1 for game in blackjack_games if game.payout > game.bet_amount)
+    
+    total_wins = dice_wins + slot_wins + blackjack_wins
+    
+    # Mock activity log for demo
+    activities = [
+        {'created_at': datetime.utcnow() - timedelta(hours=1), 'activity_type': 'Login', 'details': 'Successful login from IP 192.168.1.1'},
+        {'created_at': datetime.utcnow() - timedelta(hours=2), 'activity_type': 'Game Play', 'details': 'Played Dice Game'},
+        {'created_at': datetime.utcnow() - timedelta(hours=3), 'activity_type': 'Deposit', 'details': 'Deposited 0.1 BTC'},
+        {'created_at': datetime.utcnow() - timedelta(days=1), 'activity_type': 'Withdrawal', 'details': 'Withdrew 0.05 BTC'},
+        {'created_at': datetime.utcnow() - timedelta(days=2), 'activity_type': 'Password Change', 'details': 'Changed account password'}
+    ]
+    
+    return render_template('profile.html', user=user, wallets=wallets, total_bets=total_bets, 
+                          total_wins=total_wins, activities=activities)
 
 @app.route('/admin')
 def admin():

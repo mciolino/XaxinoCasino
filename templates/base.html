@@ -379,7 +379,9 @@
                                     {{ session.get('username') }}
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="#">My Profile</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('profile') }}">My Profile</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('wallets') }}">My Wallets</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('kyc') }}">KYC Verification</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a>

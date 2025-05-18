@@ -1,0 +1,1097 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 1rem;
+    }
+    
+    .users-icon {
+        color: var(--secondary-color);
+    }
+    
+    .bets-icon {
+        color: var(--primary-color);
+    }
+    
+    .revenue-icon {
+        color: var(--success-color);
+    }
+    
+    .deposits-icon {
+        color: var(--info-color);
+    }
+    
+    .nav-pills .nav-link {
+        color: var(--text-muted);
+        background-color: transparent;
+        border-radius: 5px;
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .nav-pills .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-pills .nav-link.active {
+        color: white;
+        background-color: var(--primary-color);
+    }
+    
+    .admin-tab-content {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(to bottom right, #6a11cb, #2575fc);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .activity-chart {
+        height: 300px;
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-bars {
+        display: flex;
+        align-items: flex-end;
+        height: 220px;
+        padding: 0 10px;
+        padding-top: 30px;
+    }
+    
+    .chart-bar {
+        flex: 1;
+        margin: 0 5px;
+        background: linear-gradient(to top, var(--primary-color), var(--secondary-color));
+        border-radius: 5px 5px 0 0;
+        position: relative;
+    }
+    
+    .chart-bar-value {
+        position: absolute;
+        top: -25px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.8rem;
+    }
+    
+    .chart-labels {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 15px;
+        margin-top: 10px;
+    }
+    
+    .chart-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-align: center;
+        flex: 1;
+    }
+    
+    .document-preview {
+        width: 100%;
+        height: 150px;
+        background-color: var(--dark-bg);
+        border-radius: 5px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .verification-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .verification-card-header {
+        padding: 1rem;
+        background-color: var(--darker-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .verification-card-body {
+        padding: 1.5rem;
+    }
+    
+    .document-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .admin-note {
+        background-color: var(--dark-bg);
+        border-radius: 5px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .game-management-card {
+        background-color: var(--light-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+        background-color: var(--success-color);
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-header">
+        <div class="row">
+            <div class="col-md-6">
+                <h1><i class="fas fa-user-shield me-2"></i> Admin Dashboard</h1>
+                <p class="text-muted">Xaxino Casino Management System</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p>{{ now.strftime('%A, %B %d, %Y') }}</p>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon users-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value">{{ users|length }}</div>
+                            <div class="stat-label">TOTAL USERS</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bets-icon">
+                            <i class="fas fa-dice"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value">127</div>
+                            <div class="stat-label">TODAY'S BETS</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon revenue-icon">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value">0.037 BTC</div>
+                            <div class="stat-label">REVENUE TODAY</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon deposits-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value">0.15 BTC</div>
+                            <div class="stat-label">DEPOSITS TODAY</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="nav flex-column nav-pills mb-4" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active" id="v-pills-dashboard-tab" data-bs-toggle="pill" data-bs-target="#v-pills-dashboard" type="button" role="tab" aria-controls="v-pills-dashboard" aria-selected="true">
+                    <i class="fas fa-chart-line me-2"></i> Dashboard
+                </button>
+                <button class="nav-link" id="v-pills-users-tab" data-bs-toggle="pill" data-bs-target="#v-pills-users" type="button" role="tab" aria-controls="v-pills-users" aria-selected="false">
+                    <i class="fas fa-users me-2"></i> User Management
+                </button>
+                <button class="nav-link" id="v-pills-kyc-tab" data-bs-toggle="pill" data-bs-target="#v-pills-kyc" type="button" role="tab" aria-controls="v-pills-kyc" aria-selected="false">
+                    <i class="fas fa-id-card me-2"></i> KYC Verification
+                    <span class="badge bg-danger ms-2">{{ pending_kyc|length }}</span>
+                </button>
+                <button class="nav-link" id="v-pills-transactions-tab" data-bs-toggle="pill" data-bs-target="#v-pills-transactions" type="button" role="tab" aria-controls="v-pills-transactions" aria-selected="false">
+                    <i class="fas fa-exchange-alt me-2"></i> Transactions
+                </button>
+                <button class="nav-link" id="v-pills-games-tab" data-bs-toggle="pill" data-bs-target="#v-pills-games" type="button" role="tab" aria-controls="v-pills-games" aria-selected="false">
+                    <i class="fas fa-gamepad me-2"></i> Game Management
+                </button>
+                <button class="nav-link" id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button" role="tab" aria-controls="v-pills-settings" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i> Platform Settings
+                </button>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-envelope me-2"></i> Send Notification
+                        </button>
+                        <button class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-gift me-2"></i> Create Promotion
+                        </button>
+                        <button class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-user-plus me-2"></i> Add New User
+                        </button>
+                        <button class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-file-export me-2"></i> Export Reports
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="tab-content" id="v-pills-tabContent">
+                <!-- Dashboard Tab -->
+                <div class="tab-pane fade show active" id="v-pills-dashboard" role="tabpanel" aria-labelledby="v-pills-dashboard-tab">
+                    <div class="admin-tab-content">
+                        <h3 class="mb-4">Platform Overview</h3>
+                        
+                        <h4 class="mb-3">Activity (Last 7 Days)</h4>
+                        <div class="activity-chart">
+                            <div class="chart-bars">
+                                <div class="chart-bar" style="height: 40%;">
+                                    <div class="chart-bar-value">43</div>
+                                </div>
+                                <div class="chart-bar" style="height: 60%;">
+                                    <div class="chart-bar-value">65</div>
+                                </div>
+                                <div class="chart-bar" style="height: 75%;">
+                                    <div class="chart-bar-value">82</div>
+                                </div>
+                                <div class="chart-bar" style="height: 55%;">
+                                    <div class="chart-bar-value">60</div>
+                                </div>
+                                <div class="chart-bar" style="height: 90%;">
+                                    <div class="chart-bar-value">98</div>
+                                </div>
+                                <div class="chart-bar" style="height: 100%;">
+                                    <div class="chart-bar-value">109</div>
+                                </div>
+                                <div class="chart-bar" style="height: 80%;">
+                                    <div class="chart-bar-value">87</div>
+                                </div>
+                            </div>
+                            <div class="chart-labels">
+                                <div class="chart-label">Mon</div>
+                                <div class="chart-label">Tue</div>
+                                <div class="chart-label">Wed</div>
+                                <div class="chart-label">Thu</div>
+                                <div class="chart-label">Fri</div>
+                                <div class="chart-label">Sat</div>
+                                <div class="chart-label">Sun</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h4 class="mb-3">Recent Sign Ups</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Registered</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in users[:5] %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="user-avatar me-2">
+                                                            {{ user.username[0]|upper }}
+                                                        </div>
+                                                        <div>
+                                                            <div>{{ user.username }}</div>
+                                                            <small class="text-muted">{{ user.email }}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>2023-01-01</td>
+                                                <td>
+                                                    <span class="badge {% if user.kyc_status == 'verified' %}bg-success{% elif user.kyc_status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                        {{ user.kyc_status|capitalize }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h4 class="mb-3">Game Stats</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Game</th>
+                                                <th>Bets</th>
+                                                <th>House Edge</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Dice Game</td>
+                                                <td>543</td>
+                                                <td>2.1%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Slots</td>
+                                                <td>327</td>
+                                                <td>3.5%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Blackjack</td>
+                                                <td>215</td>
+                                                <td>1.8%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Roulette</td>
+                                                <td>0</td>
+                                                <td>2.7%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h4 class="mb-3">System Status</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Service</th>
+                                                <th>Status</th>
+                                                <th>Uptime</th>
+                                                <th>Last Check</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Web Server</td>
+                                                <td><span class="badge bg-success">Online</span></td>
+                                                <td>7d 12h 43m</td>
+                                                <td>2 minutes ago</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Database</td>
+                                                <td><span class="badge bg-success">Online</span></td>
+                                                <td>7d 12h 43m</td>
+                                                <td>2 minutes ago</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Payment Gateway</td>
+                                                <td><span class="badge bg-success">Online</span></td>
+                                                <td>7d 12h 43m</td>
+                                                <td>2 minutes ago</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Email Service</td>
+                                                <td><span class="badge bg-warning text-dark">Degraded</span></td>
+                                                <td>7d 12h 43m</td>
+                                                <td>2 minutes ago</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Management Tab -->
+                <div class="tab-pane fade" id="v-pills-users" role="tabpanel" aria-labelledby="v-pills-users-tab">
+                    <div class="admin-tab-content">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="mb-0">User Management</h3>
+                            <button class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i> Add New User
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Search users...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>KYC Status</th>
+                                        <th>Balance</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-2">
+                                                    {{ user.username[0]|upper }}
+                                                </div>
+                                                <div>{{ user.username }}</div>
+                                            </div>
+                                        </td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.role }}</td>
+                                        <td>
+                                            <span class="badge {% if user.kyc_status == 'verified' %}bg-success{% elif user.kyc_status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                {{ user.kyc_status|capitalize }}
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.8f"|format(1.25) }} BTC</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-user-lock"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="User pagination">
+                            <ul class="pagination justify-content-center mt-4">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- KYC Verification Tab -->
+                <div class="tab-pane fade" id="v-pills-kyc" role="tabpanel" aria-labelledby="v-pills-kyc-tab">
+                    <div class="admin-tab-content">
+                        <h3 class="mb-4">KYC Verification Requests</h3>
+                        
+                        <ul class="nav nav-tabs mb-4" id="kycTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab" aria-controls="pending" aria-selected="true">
+                                    Pending <span class="badge bg-danger ms-2">{{ pending_kyc|length }}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab" aria-controls="approved" aria-selected="false">
+                                    Approved
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab" aria-controls="rejected" aria-selected="false">
+                                    Rejected
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="kycTabsContent">
+                            <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+                                {% if pending_kyc|length > 0 %}
+                                    {% for doc in pending_kyc %}
+                                    <div class="verification-card">
+                                        <div class="verification-card-header">
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-2">
+                                                    U
+                                                </div>
+                                                <div>
+                                                    <h5 class="mb-0">User #{{ doc.user_id }}</h5>
+                                                    <small class="text-muted">Submitted: {{ doc.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                </div>
+                                            </div>
+                                            <span class="badge bg-warning text-dark">Pending Review</span>
+                                        </div>
+                                        <div class="verification-card-body">
+                                            <h5 class="mb-3">Document: {{ doc.document_type }}</h5>
+                                            <div class="document-grid">
+                                                <div class="document-preview">
+                                                    <i class="fas fa-file-image fa-3x text-muted"></i>
+                                                </div>
+                                            </div>
+                                            <div class="admin-note">
+                                                <h6>Admin Notes</h6>
+                                                <textarea class="form-control mb-3" rows="2" placeholder="Add verification notes here..."></textarea>
+                                            </div>
+                                            <div class="d-flex">
+                                                <button class="btn btn-success me-2">
+                                                    <i class="fas fa-check me-2"></i> Approve
+                                                </button>
+                                                <button class="btn btn-danger">
+                                                    <i class="fas fa-times me-2"></i> Reject
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center py-5">
+                                        <div class="mb-3">
+                                            <i class="fas fa-check-circle fa-4x text-muted"></i>
+                                        </div>
+                                        <h5>No Pending Verification Requests</h5>
+                                        <p class="text-muted">All KYC verifications have been processed.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="tab-pane fade" id="approved" role="tabpanel" aria-labelledby="approved-tab">
+                                <div class="text-center py-5">
+                                    <div class="mb-3">
+                                        <i class="fas fa-check-circle fa-4x text-success"></i>
+                                    </div>
+                                    <h5>Approved Verifications</h5>
+                                    <p class="text-muted">You can view the history of approved KYC verifications here.</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="rejected" role="tabpanel" aria-labelledby="rejected-tab">
+                                <div class="text-center py-5">
+                                    <div class="mb-3">
+                                        <i class="fas fa-times-circle fa-4x text-danger"></i>
+                                    </div>
+                                    <h5>Rejected Verifications</h5>
+                                    <p class="text-muted">You can view the history of rejected KYC verifications here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Transactions Tab -->
+                <div class="tab-pane fade" id="v-pills-transactions" role="tabpanel" aria-labelledby="v-pills-transactions-tab">
+                    <div class="admin-tab-content">
+                        <h3 class="mb-4">Transaction History</h3>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search transactions...">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select">
+                                    <option>All Types</option>
+                                    <option>Deposits</option>
+                                    <option>Withdrawals</option>
+                                    <option>Bets</option>
+                                    <option>Payouts</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select">
+                                    <option>All Currencies</option>
+                                    <option>BTC</option>
+                                    <option>ETH</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>#78943</td>
+                                        <td>user@example.com</td>
+                                        <td>Deposit</td>
+                                        <td>0.05 BTC</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td>2023-01-01 12:30</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#78942</td>
+                                        <td>admin@xaxino.com</td>
+                                        <td>Withdrawal</td>
+                                        <td>0.1 BTC</td>
+                                        <td><span class="badge bg-warning text-dark">Pending</span></td>
+                                        <td>2023-01-01 12:25</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#78941</td>
+                                        <td>user@example.com</td>
+                                        <td>Bet</td>
+                                        <td>0.01 BTC</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td>2023-01-01 12:20</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#78940</td>
+                                        <td>user@example.com</td>
+                                        <td>Payout</td>
+                                        <td>0.02 BTC</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td>2023-01-01 12:20</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#78939</td>
+                                        <td>admin@xaxino.com</td>
+                                        <td>Withdrawal</td>
+                                        <td>0.5 ETH</td>
+                                        <td><span class="badge bg-danger">Failed</span></td>
+                                        <td>2023-01-01 12:15</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-light">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="Transaction pagination">
+                            <ul class="pagination justify-content-center mt-4">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Game Management Tab -->
+                <div class="tab-pane fade" id="v-pills-games" role="tabpanel" aria-labelledby="v-pills-games-tab">
+                    <div class="admin-tab-content">
+                        <h3 class="mb-4">Game Management</h3>
+                        
+                        <div class="game-management-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Dice Game</h4>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">House Edge</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="2" step="0.1" min="0.1" max="10">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Min Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="0.0001" step="0.0001" min="0.0001">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="1" step="0.01" min="0.01">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary">Save Settings</button>
+                        </div>
+                        
+                        <div class="game-management-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Slot Machine</h4>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">House Edge</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="3.5" step="0.1" min="0.1" max="10">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Min Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="0.0001" step="0.0001" min="0.0001">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="0.5" step="0.01" min="0.01">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary">Save Settings</button>
+                        </div>
+                        
+                        <div class="game-management-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Blackjack</h4>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">House Edge</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="1.8" step="0.1" min="0.1" max="10">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Min Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="0.0001" step="0.0001" min="0.0001">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Bet</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" value="0.8" step="0.01" min="0.01">
+                                            <select class="form-select" style="max-width: 80px;">
+                                                <option>BTC</option>
+                                                <option>ETH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary">Save Settings</button>
+                        </div>
+                        
+                        <div class="game-management-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Roulette <span class="badge bg-secondary ms-2">Coming Soon</span></h4>
+                                <label class="toggle-switch">
+                                    <input type="checkbox">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p class="text-muted">This game is currently in development and will be available soon.</p>
+                            <button class="btn btn-primary" disabled>Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Platform Settings Tab -->
+                <div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">
+                    <div class="admin-tab-content">
+                        <h3 class="mb-4">Platform Settings</h3>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">General Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <form>
+                                    <div class="mb-3">
+                                        <label for="siteName" class="form-label">Platform Name</label>
+                                        <input type="text" class="form-control" id="siteName" value="Xaxino Casino">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="siteDescription" class="form-label">Platform Description</label>
+                                        <textarea class="form-control" id="siteDescription" rows="2">The Ultimate Casino Platform with Provably Fair Games</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="contactEmail" class="form-label">Contact Email</label>
+                                        <input type="email" class="form-control" id="contactEmail" value="support@xaxino.com">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Payment Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <form>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="enableBTC" checked>
+                                        <label class="form-check-label" for="enableBTC">
+                                            Enable Bitcoin (BTC)
+                                        </label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="enableETH" checked>
+                                        <label class="form-check-label" for="enableETH">
+                                            Enable Ethereum (ETH)
+                                        </label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="enableStripe">
+                                        <label class="form-check-label" for="enableStripe">
+                                            Enable Stripe Payments
+                                        </label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="enablePayPal">
+                                        <label class="form-check-label" for="enablePayPal">
+                                            Enable PayPal Payments
+                                        </label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Security Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <form>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="force2FA">
+                                        <label class="form-check-label" for="force2FA">
+                                            Force 2FA for all users
+                                        </label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="forceKYC" checked>
+                                        <label class="form-check-label" for="forceKYC">
+                                            Force KYC for withdrawals over 1 BTC
+                                        </label>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxLoginAttempts" class="form-label">Max Login Attempts</label>
+                                        <input type="number" class="form-control" id="maxLoginAttempts" value="5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                                        <input type="number" class="form-control" id="sessionTimeout" value="60">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any admin dashboard-specific JavaScript here
+    });
+</script>
+{% endblock %}
