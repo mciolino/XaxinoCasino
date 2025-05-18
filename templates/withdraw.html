@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Withdraw {{ wallet.currency }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <div class="wallet-icon me-3">
+                        {% if wallet.currency == 'BTC' %}
+                        <i class="fab fa-bitcoin fa-2x btc"></i>
+                        {% elif wallet.currency == 'ETH' %}
+                        <i class="fab fa-ethereum fa-2x eth"></i>
+                        {% endif %}
+                    </div>
+                    <h2 class="mb-0">Withdraw {{ wallet.currency }}</h2>
+                </div>
+
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> This is a demo wallet. In a real application, withdrawals would be processed through blockchain transactions.
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Your {{ wallet.currency }} Balance</h5>
+                        <div class="fs-3 fw-bold mb-3">
+                            {% if wallet.currency == 'BTC' %}₿{% elif wallet.currency == 'ETH' %}Ξ{% endif %} {{ "%.8f"|format(wallet.balance) }}
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mt-4">
+                        <h5>Withdraw Funds</h5>
+                        <form method="POST" action="{{ url_for('withdraw', currency=wallet.currency) }}">
+                            <div class="mb-3">
+                                <label for="destination" class="form-label">Destination Address</label>
+                                <input type="text" id="destination" name="destination" class="form-control" required>
+                                <div class="form-text">Enter a valid {{ wallet.currency }} address to receive your funds</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount to Withdraw</label>
+                                <div class="input-group">
+                                    <input type="number" id="amount" name="amount" class="form-control" step="0.00000001" min="0.00000001" max="{{ wallet.balance }}" required>
+                                    <span class="input-group-text">{{ wallet.currency }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <div class="form-text">
+                                        Min: 0.0001 {{ wallet.currency }}
+                                    </div>
+                                    <div>
+                                        <a href="#" class="small" id="maxAmountBtn">Max</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="fee" class="form-label">Network Fee</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="fee" name="fee">
+                                        <option value="fast">Fast ({{ "%.8f"|format(0.0001) }} {{ wallet.currency }})</option>
+                                        <option value="medium" selected>Medium ({{ "%.8f"|format(0.00005) }} {{ wallet.currency }})</option>
+                                        <option value="slow">Slow ({{ "%.8f"|format(0.00001) }} {{ wallet.currency }})</option>
+                                    </select>
+                                </div>
+                                <div class="form-text">Higher fees result in faster transaction confirmation times</div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between">
+                                    <span>Amount:</span>
+                                    <span id="summaryAmount">0 {{ wallet.currency }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Fee:</span>
+                                    <span id="summaryFee">{{ "%.8f"|format(0.00005) }} {{ wallet.currency }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between fw-bold mt-2">
+                                    <span>Total:</span>
+                                    <span id="summaryTotal">0 {{ wallet.currency }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-up me-2"></i> Withdraw Funds
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <a href="{{ url_for('wallets') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Wallets
+                    </a>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Withdrawal Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>Minimum withdrawal: 0.0001 {{ wallet.currency }}</li>
+                            <li>Maximum withdrawal: {{ wallet.balance }} {{ wallet.currency }}</li>
+                            <li>Withdrawals are processed within 30 minutes</li>
+                            <li>Always verify the destination address before withdrawing</li>
+                            <li>For large withdrawals (>1 {{ wallet.currency }}), KYC verification may be required</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountInput = document.getElementById('amount');
+        const maxAmountBtn = document.getElementById('maxAmountBtn');
+        const feeSelect = document.getElementById('fee');
+        const summaryAmount = document.getElementById('summaryAmount');
+        const summaryFee = document.getElementById('summaryFee');
+        const summaryTotal = document.getElementById('summaryTotal');
+        
+        const walletBalance = {{ wallet.balance }};
+        
+        // Fee values
+        const fees = {
+            fast: 0.0001,
+            medium: 0.00005,
+            slow: 0.00001
+        };
+        
+        // Set max amount
+        maxAmountBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const currentFee = fees[feeSelect.value];
+            const maxAmount = Math.max(0, walletBalance - currentFee);
+            amountInput.value = maxAmount.toFixed(8);
+            updateSummary();
+        });
+        
+        // Update summary on amount change
+        amountInput.addEventListener('input', updateSummary);
+        
+        // Update summary on fee change
+        feeSelect.addEventListener('change', function() {
+            const feeValue = fees[this.value];
+            summaryFee.textContent = feeValue.toFixed(8) + ' {{ wallet.currency }}';
+            updateSummary();
+        });
+        
+        // Calculate and update summary
+        function updateSummary() {
+            const amount = parseFloat(amountInput.value) || 0;
+            const feeValue = fees[feeSelect.value];
+            
+            summaryAmount.textContent = amount.toFixed(8) + ' {{ wallet.currency }}';
+            const total = amount + feeValue;
+            summaryTotal.textContent = total.toFixed(8) + ' {{ wallet.currency }}';
+            
+            // Check if total exceeds balance
+            if (total > walletBalance) {
+                amountInput.setCustomValidity('Total amount exceeds your wallet balance');
+            } else {
+                amountInput.setCustomValidity('');
+            }
+        }
+        
+        // Initial update
+        updateSummary();
+    });
+</script>
+{% endblock %}

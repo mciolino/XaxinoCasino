@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block title %}KYC Verification{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>KYC Verification</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> Know Your Customer (KYC) verification is required for withdrawals over certain limits and higher account tiers.
+                    </div>
+
+                    <div class="mb-4">
+                        <h4>Verification Status: 
+                            {% if user.kyc_status == 'verified' %}
+                                <span class="badge bg-success">Verified</span>
+                            {% elif user.kyc_status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif user.kyc_status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Submitted</span>
+                            {% endif %}
+                        </h4>
+                    </div>
+
+                    {% if user.kyc_status == 'verified' %}
+                    <div class="text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle fa-5x text-success"></i>
+                        </div>
+                        <h3>Verification Complete</h3>
+                        <p class="mb-3">Your account has been fully verified. You now have access to all features of the platform.</p>
+                        <a href="{{ url_for('home') }}" class="btn btn-primary">Return to Home</a>
+                    </div>
+                    {% elif user.kyc_status == 'rejected' %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Your verification was rejected. Please check the notes below and submit new documents.
+                    </div>
+                    <div class="mb-4">
+                        <h5>Rejection Reason:</h5>
+                        <p>The submitted documents were unclear or did not meet our requirements. Please ensure your documents are clear, legible, and not expired.</p>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#kycForm">
+                            <i class="fas fa-redo me-2"></i> Submit New Documents
+                        </button>
+                    </div>
+                    {% elif documents|length > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock me-2"></i> Your verification is currently under review. This process typically takes 24-48 hours.
+                    </div>
+                    <div class="mb-4">
+                        <h5>Submitted Documents:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark">
+                                <thead>
+                                    <tr>
+                                        <th>Document Type</th>
+                                        <th>Submitted On</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in documents %}
+                                    <tr>
+                                        <td>{{ doc.document_type }}</td>
+                                        <td>{{ doc.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if doc.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                            {% elif doc.status == 'verified' %}
+                                            <span class="badge bg-success">Verified</span>
+                                            {% elif doc.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="collapse show" id="kycForm">
+                        <form method="POST" action="{{ url_for('kyc') }}" enctype="multipart/form-data">
+                            <div class="mb-4">
+                                <h5>1. Personal Information</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="firstName" class="form-label">First Name</label>
+                                        <input type="text" class="form-control" id="firstName" name="first_name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="lastName" class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" id="lastName" name="last_name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="birthdate" class="form-label">Date of Birth</label>
+                                        <input type="date" class="form-control" id="birthdate" name="birthdate" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="nationality" class="form-label">Nationality</label>
+                                        <select class="form-select" id="nationality" name="nationality" required>
+                                            <option value="">Select Nationality</option>
+                                            <option value="US">United States</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="CA">Canada</option>
+                                            <option value="AU">Australia</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="FR">France</option>
+                                            <option value="JP">Japan</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5>2. Address Information</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="address1" class="form-label">Address Line 1</label>
+                                        <input type="text" class="form-control" id="address1" name="address1" required>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label for="address2" class="form-label">Address Line 2 (Optional)</label>
+                                        <input type="text" class="form-control" id="address2" name="address2">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="city" class="form-label">City</label>
+                                        <input type="text" class="form-control" id="city" name="city" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="zipCode" class="form-label">ZIP/Postal Code</label>
+                                        <input type="text" class="form-control" id="zipCode" name="zip_code" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="state" class="form-label">State/Province</label>
+                                        <input type="text" class="form-control" id="state" name="state" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="country" class="form-label">Country</label>
+                                        <select class="form-select" id="country" name="country" required>
+                                            <option value="">Select Country</option>
+                                            <option value="US">United States</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="CA">Canada</option>
+                                            <option value="AU">Australia</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="FR">France</option>
+                                            <option value="JP">Japan</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5>3. Identity Verification</h5>
+                                <div class="mb-3">
+                                    <label for="documentType" class="form-label">Document Type</label>
+                                    <select class="form-select" id="documentType" name="document_type" required>
+                                        <option value="">Select Document Type</option>
+                                        <option value="passport">Passport</option>
+                                        <option value="id_card">National ID Card</option>
+                                        <option value="drivers_license">Driver's License</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="idFront" class="form-label">ID Document (Front)</label>
+                                    <input type="file" class="form-control" id="idFront" name="id_front" accept="image/*" required>
+                                    <div class="form-text">Upload a clear photo of the front of your ID document.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="idBack" class="form-label">ID Document (Back)</label>
+                                    <input type="file" class="form-control" id="idBack" name="id_back" accept="image/*" required>
+                                    <div class="form-text">Upload a clear photo of the back of your ID document.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="selfie" class="form-label">Selfie with ID</label>
+                                    <input type="file" class="form-control" id="selfie" name="selfie" accept="image/*" required>
+                                    <div class="form-text">Upload a photo of yourself holding your ID document.</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5>4. Proof of Address</h5>
+                                <div class="mb-3">
+                                    <label for="addressProof" class="form-label">Proof of Address Document</label>
+                                    <input type="file" class="form-control" id="addressProof" name="address_proof" accept="image/*,application/pdf" required>
+                                    <div class="form-text">Upload a utility bill, bank statement, or official government letter (not older than 3 months).</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="termsCheck" name="terms_check" required>
+                                    <label class="form-check-label" for="termsCheck">
+                                        I confirm that all the information provided is accurate and authentic. I understand that providing false information may result in account termination.
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-upload me-2"></i> Submit Verification
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4>KYC Verification FAQ</h4>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="kycFaq">
+                        <div class="accordion-item bg-dark text-white border-secondary">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button bg-dark text-white collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    Why do I need to verify my identity?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#kycFaq">
+                                <div class="accordion-body">
+                                    Know Your Customer (KYC) verification is required to comply with international anti-money laundering (AML) regulations. It helps us ensure the security of our platform and protect our users from fraud.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-dark text-white border-secondary">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button bg-dark text-white collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    How long does verification take?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#kycFaq">
+                                <div class="accordion-body">
+                                    Verification typically takes 24-48 hours, but may take longer during periods of high demand. You will receive an email notification once your verification is complete.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-dark text-white border-secondary">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button bg-dark text-white collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    What documents are accepted for verification?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#kycFaq">
+                                <div class="accordion-body">
+                                    We accept government-issued identification documents such as passports, national ID cards, and driver's licenses. For proof of address, you can submit a recent utility bill, bank statement, or official government letter (not older than 3 months).
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item bg-dark text-white border-secondary">
+                            <h2 class="accordion-header" id="headingFour">
+                                <button class="accordion-button bg-dark text-white collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                    Is my data secure?
+                                </button>
+                            </h2>
+                            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#kycFaq">
+                                <div class="accordion-body">
+                                    Yes, your data is encrypted and securely stored. We adhere to strict privacy policies and will never share your personal information with unauthorized third parties. All verification is conducted through secure channels.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

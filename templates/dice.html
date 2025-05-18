@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block title %}Dice Game{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2><i class="fas fa-dice me-2"></i> Dice Game</h2>
+                </div>
+                <div class="card-body">
+                    <div class="dice-game-container">
+                        <div class="dice-result-container mb-4" id="diceResultContainer">
+                            <div class="dice-placeholder" id="dicePlaceholder">
+                                <i class="fas fa-dice-five fa-5x"></i>
+                                <p>Roll the dice to play!</p>
+                            </div>
+                            <div class="dice-result d-none" id="diceResult">
+                                <div class="result-number" id="resultNumber">00.00</div>
+                                <div class="result-status">
+                                    <span class="win-badge d-none" id="winBadge">WIN!</span>
+                                    <span class="lose-badge d-none" id="loseBadge">LOSE!</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dice-game-form">
+                            <form id="diceGameForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-6 mb-3 mb-md-0">
+                                        <label for="betAmount" class="form-label">Bet Amount</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="betAmount" step="0.00000001" min="0.00000001" required>
+                                            <select class="form-select" id="walletSelector" style="max-width: 100px;">
+                                                {% for wallet in wallets %}
+                                                <option value="{{ wallet.id }}" data-balance="{{ wallet.balance }}">{{ wallet.currency }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="form-text">
+                                            Balance: <span id="walletBalance">Loading...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="clientSeed" class="form-label">Client Seed <i class="fas fa-info-circle" data-bs-toggle="tooltip" title="This seed is combined with the server seed to generate your roll result"></i></label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="clientSeed" required>
+                                            <button class="btn btn-outline-secondary" type="button" id="generateSeedBtn">
+                                                <i class="fas fa-random"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Win Chance</label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">0%</span>
+                                            <input type="range" class="form-range flex-grow-1" id="winChanceSlider" min="1" max="95" step="1" value="50">
+                                            <span class="ms-2"><span id="winChanceValue">50</span>%</span>
+                                        </div>
+                                        <div class="form-text text-center">
+                                            Roll under <span id="targetNumber">50.00</span> to win <span id="multiplierValue">2.00</span>x
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg" id="rollButton">
+                                        <i class="fas fa-dice"></i> Roll Dice
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4>Provably Fair System</h4>
+                </div>
+                <div class="card-body">
+                    <p>Our dice game uses a provably fair algorithm to ensure complete transparency and fairness:</p>
+                    <ol>
+                        <li>Before your roll, we create a <strong>server seed</strong> and send you its hash.</li>
+                        <li>You provide a <strong>client seed</strong> of your choice.</li>
+                        <li>The roll result is calculated using: <code>SHA256(server_seed + client_seed)</code></li>
+                        <li>After the roll, we reveal the original server seed so you can verify the result.</li>
+                    </ol>
+                    <div class="mt-3 d-none" id="verificationTool">
+                        <h5>Verify Your Last Roll</h5>
+                        <div class="verification-data">
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Server Seed:</strong></div>
+                                <div class="col-md-8"><code id="serverSeedValue">N/A</code></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Client Seed:</strong></div>
+                                <div class="col-md-8"><code id="clientSeedValue">N/A</code></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Result:</strong></div>
+                                <div class="col-md-8"><code id="rollResultValue">N/A</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Recent Bets</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Bet</th>
+                                    <th>Roll</th>
+                                    <th>Payout</th>
+                                </tr>
+                            </thead>
+                            <tbody id="betHistoryTable">
+                                {% if recent_bets|length > 0 %}
+                                    {% for bet in recent_bets %}
+                                    <tr class="{{ 'text-success' if bet.payout > bet.bet_amount else 'text-danger' }}">
+                                        <td>{{ bet.created_at.strftime('%H:%M:%S') }}</td>
+                                        <td>{{ "%.8f"|format(bet.bet_amount) }} {{ bet.currency }}</td>
+                                        <td>{{ "%.2f"|format(bet.rolled_number) }}</td>
+                                        <td>{{ "%.8f"|format(bet.payout) }} {{ bet.currency }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No bets yet</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4>Game Stats</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <div class="small text-muted">Bets Made</div>
+                            <div class="fs-5 fw-bold" id="totalBets">{{ recent_bets|length }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Win Rate</div>
+                            <div class="fs-5 fw-bold" id="winRate">
+                                {% set win_count = 0 %}
+                                {% for bet in recent_bets %}
+                                    {% if bet.payout > bet.bet_amount %}
+                                        {% set win_count = win_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if recent_bets|length > 0 %}
+                                    {{ (win_count / recent_bets|length * 100)|round|int }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="small text-muted">Best Win</div>
+                            <div class="fs-5 fw-bold" id="bestWin">
+                                {% set best_win = 0 %}
+                                {% for bet in recent_bets %}
+                                    {% if bet.payout > best_win %}
+                                        {% set best_win = bet.payout %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ "%.8f"|format(best_win) }}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Wagered</div>
+                            <div class="fs-5 fw-bold" id="totalWagered">
+                                {% set total_wagered = 0 %}
+                                {% for bet in recent_bets %}
+                                    {% set total_wagered = total_wagered + bet.bet_amount %}
+                                {% endfor %}
+                                {{ "%.8f"|format(total_wagered) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const diceGameForm = document.getElementById('diceGameForm');
+    const rollButton = document.getElementById('rollButton');
+    const betAmount = document.getElementById('betAmount');
+    const clientSeed = document.getElementById('clientSeed');
+    const walletSelector = document.getElementById('walletSelector');
+    const walletBalance = document.getElementById('walletBalance');
+    const generateSeedBtn = document.getElementById('generateSeedBtn');
+    const winChanceSlider = document.getElementById('winChanceSlider');
+    const winChanceValue = document.getElementById('winChanceValue');
+    const targetNumber = document.getElementById('targetNumber');
+    const multiplierValue = document.getElementById('multiplierValue');
+    
+    const dicePlaceholder = document.getElementById('dicePlaceholder');
+    const diceResult = document.getElementById('diceResult');
+    const resultNumber = document.getElementById('resultNumber');
+    const winBadge = document.getElementById('winBadge');
+    const loseBadge = document.getElementById('loseBadge');
+    
+    const verificationTool = document.getElementById('verificationTool');
+    const serverSeedValue = document.getElementById('serverSeedValue');
+    const clientSeedValue = document.getElementById('clientSeedValue');
+    const rollResultValue = document.getElementById('rollResultValue');
+    
+    const betHistoryTable = document.getElementById('betHistoryTable');
+    
+    // Game state
+    let currentWallet = null;
+    let currentBalance = 0;
+    
+    // Initialize
+    function init() {
+        // Generate random seed
+        clientSeed.value = generateRandomString();
+        
+        // Set initial wallet
+        if (walletSelector.options.length > 0) {
+            currentWallet = walletSelector.options[0].value;
+            currentBalance = parseFloat(walletSelector.options[0].dataset.balance);
+            updateBalanceDisplay();
+        }
+        
+        // Set events
+        diceGameForm.addEventListener('submit', handleSubmit);
+        generateSeedBtn.addEventListener('click', handleGenerateSeed);
+        walletSelector.addEventListener('change', handleWalletChange);
+        winChanceSlider.addEventListener('input', handleWinChanceChange);
+        
+        // Initial win chance update
+        handleWinChanceChange();
+    }
+    
+    // Handle form submission
+    async function handleSubmit(e) {
+        e.preventDefault();
+        
+        // Validate bet amount
+        const amount = parseFloat(betAmount.value);
+        if (isNaN(amount) || amount <= 0 || amount > currentBalance) {
+            showError('Invalid bet amount');
+            return;
+        }
+        
+        // Disable form during bet
+        setFormState(false);
+        
+        try {
+            // Send bet to server
+            const response = await fetch('/games/dice/play', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bet_amount: amount,
+                    client_seed: clientSeed.value,
+                    wallet_id: currentWallet
+                })
+            });
+            
+            const data = JSON.parse(await response.text());
+            
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+            
+            // Update balance
+            currentBalance = data.wallet_balance;
+            updateBalanceDisplay();
+            
+            // Show result
+            displayResult(data.bet, data.is_win);
+            
+            // Update verification tool
+            updateVerificationTool(data.bet);
+            
+            // Update stats
+            updateGameStats(data.bet);
+            
+            // Add to bet history
+            updateBetHistory(data.bet);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError('An error occurred while processing your bet');
+        } finally {
+            setFormState(true);
+        }
+    }
+    
+    // Display the roll result
+    function displayResult(bet, isWin) {
+        // Hide placeholder, show result
+        dicePlaceholder.classList.add('d-none');
+        diceResult.classList.remove('d-none');
+        
+        // Show roll number
+        resultNumber.textContent = bet.rolled_number.toFixed(2);
+        
+        // Show win/lose badge
+        if (isWin) {
+            winBadge.classList.remove('d-none');
+            loseBadge.classList.add('d-none');
+        } else {
+            winBadge.classList.add('d-none');
+            loseBadge.classList.remove('d-none');
+        }
+        
+        // Animate the result
+        diceResult.classList.add('animate-pulse');
+        setTimeout(() => {
+            diceResult.classList.remove('animate-pulse');
+        }, 1000);
+    }
+    
+    // Update verification tool with bet data
+    function updateVerificationTool(bet) {
+        serverSeedValue.textContent = bet.server_seed;
+        clientSeedValue.textContent = bet.client_seed;
+        rollResultValue.textContent = bet.rolled_number.toFixed(2);
+        
+        verificationTool.classList.remove('d-none');
+    }
+    
+    // Update bet history table
+    function updateBetHistory(bet) {
+        const row = document.createElement('tr');
+        row.className = bet.payout > bet.bet_amount ? 'text-success' : 'text-danger';
+        
+        const date = new Date(bet.created_at);
+        const time = date.toLocaleTimeString('en-US', { hour12: false });
+        
+        row.innerHTML = `
+            <td>${time}</td>
+            <td>${bet.bet_amount.toFixed(8)} ${bet.currency}</td>
+            <td>${bet.rolled_number.toFixed(2)}</td>
+            <td>${bet.payout.toFixed(8)} ${bet.currency}</td>
+        `;
+        
+        // Add to top of table
+        const emptyRow = betHistoryTable.querySelector('td[colspan="4"]');
+        if (emptyRow) {
+            betHistoryTable.innerHTML = '';
+        }
+        
+        betHistoryTable.insertBefore(row, betHistoryTable.firstChild);
+        
+        // Limit to 10 rows
+        const rows = betHistoryTable.querySelectorAll('tr');
+        if (rows.length > 10) {
+            betHistoryTable.removeChild(rows[rows.length - 1]);
+        }
+    }
+    
+    // Update game stats
+    function updateGameStats(newBet) {
+        const totalBetsEl = document.getElementById('totalBets');
+        const winRateEl = document.getElementById('winRate');
+        const bestWinEl = document.getElementById('bestWin');
+        const totalWageredEl = document.getElementById('totalWagered');
+        
+        // Update totals
+        const currentTotal = parseInt(totalBetsEl.textContent) || 0;
+        totalBetsEl.textContent = currentTotal + 1;
+        
+        // Update win rate
+        const isWin = newBet.payout > newBet.bet_amount;
+        const currentWins = parseInt(winRateEl.textContent) || 0;
+        const newWinRate = Math.round((currentWins + (isWin ? 1 : 0)) / (currentTotal + 1) * 100);
+        winRateEl.textContent = `${newWinRate}%`;
+        
+        // Update best win
+        const currentBestWin = parseFloat(bestWinEl.textContent) || 0;
+        if (newBet.payout > currentBestWin) {
+            bestWinEl.textContent = newBet.payout.toFixed(8);
+        }
+        
+        // Update total wagered
+        const currentWagered = parseFloat(totalWageredEl.textContent) || 0;
+        totalWageredEl.textContent = (currentWagered + newBet.bet_amount).toFixed(8);
+    }
+    
+    // Generate a random seed
+    function generateRandomString(length = 16) {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+    
+    // Handle generate seed button click
+    function handleGenerateSeed() {
+        clientSeed.value = generateRandomString();
+    }
+    
+    // Handle wallet change
+    function handleWalletChange() {
+        const selectedOption = walletSelector.options[walletSelector.selectedIndex];
+        currentWallet = selectedOption.value;
+        currentBalance = parseFloat(selectedOption.dataset.balance);
+        updateBalanceDisplay();
+    }
+    
+    // Update balance display
+    function updateBalanceDisplay() {
+        if (currentBalance !== null) {
+            const currency = walletSelector.options[walletSelector.selectedIndex].text;
+            walletBalance.textContent = `${currentBalance.toFixed(8)} ${currency}`;
+        } else {
+            walletBalance.textContent = 'No wallet selected';
+        }
+    }
+    
+    // Handle win chance slider change
+    function handleWinChanceChange() {
+        const chance = parseInt(winChanceSlider.value);
+        winChanceValue.textContent = chance;
+        targetNumber.textContent = chance.toFixed(2);
+        
+        // Calculate multiplier (house edge 2%)
+        const multiplier = (100 - 2) / chance;
+        multiplierValue.textContent = multiplier.toFixed(2);
+    }
+    
+    // Show error message
+    function showError(message) {
+        alert(message);
+    }
+    
+    // Enable/disable form during bet
+    function setFormState(enabled) {
+        betAmount.disabled = !enabled;
+        clientSeed.disabled = !enabled;
+        walletSelector.disabled = !enabled;
+        winChanceSlider.disabled = !enabled;
+        rollButton.disabled = !enabled;
+        
+        if (!enabled) {
+            rollButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rolling...';
+        } else {
+            rollButton.innerHTML = '<i class="fas fa-dice"></i> Roll Dice';
+        }
+    }
+    
+    // Initialize
+    init();
+});
+</script>
+{% endblock %}

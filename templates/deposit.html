@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Deposit {{ wallet.currency }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <div class="wallet-icon me-3">
+                        {% if wallet.currency == 'BTC' %}
+                        <i class="fab fa-bitcoin fa-2x btc"></i>
+                        {% elif wallet.currency == 'ETH' %}
+                        <i class="fab fa-ethereum fa-2x eth"></i>
+                        {% endif %}
+                    </div>
+                    <h2 class="mb-0">Deposit {{ wallet.currency }}</h2>
+                </div>
+
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> This is a demo wallet. In a real application, deposits would be processed through blockchain transactions.
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Your {{ wallet.currency }} Wallet Address</h5>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" value="{{ wallet.address }}" readonly>
+                            <button class="btn btn-outline-secondary copy-btn" type="button" data-clipboard-text="{{ wallet.address }}">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="text-center mt-4">
+                            <div class="qr-code-placeholder p-4 bg-light text-center rounded" style="max-width: 200px; margin: 0 auto;">
+                                <i class="fas fa-qrcode fa-5x text-muted"></i>
+                                <p class="mt-2 mb-0 small text-muted">QR Code Placeholder</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mt-4">
+                        <h5>Simulate Deposit</h5>
+                        <p>For demo purposes, you can simulate a deposit by adding funds to your wallet.</p>
+                        
+                        <form method="POST" action="{{ url_for('deposit', currency=wallet.currency) }}">
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount to Deposit</label>
+                                <div class="input-group">
+                                    <input type="number" id="amount" name="amount" class="form-control" step="0.00000001" min="0.00000001" required>
+                                    <span class="input-group-text">{{ wallet.currency }}</span>
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-arrow-down me-2"></i> Simulate Deposit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <a href="{{ url_for('wallets') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Wallets
+                    </a>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Deposit Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>Minimum deposit: 0.0001 {{ wallet.currency }}</li>
+                            <li>Deposits typically require 1-3 confirmations depending on the blockchain</li>
+                            <li>After confirmation, funds will appear in your wallet automatically</li>
+                            <li>For large deposits (>1 {{ wallet.currency }}), please contact support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new ClipboardJS('.copy-btn');
+        
+        // Add tooltip functionality
+        const copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i>';
+                
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    });
+</script>
+{% endblock %}

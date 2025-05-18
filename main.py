@@ -95,14 +95,13 @@ def get_user_wallets():
     # Create wallets if they don't exist
     if len(user.wallets) == 0:
         for currency in ['BTC', 'ETH']:
-            wallet = Wallet(
-                user_id=user.id,
-                currency=currency,
-                address=generate_wallet_address(currency),
-                private_key=generate_private_key(),
-                balance=1.0  # Demo balance
-            )
-            db.session.add(wallet)
+            new_wallet = Wallet()
+            new_wallet.user_id = user.id
+            new_wallet.currency = currency
+            new_wallet.address = generate_wallet_address(currency)
+            new_wallet.private_key = generate_private_key()
+            new_wallet.balance = 1.0  # Demo balance
+            db.session.add(new_wallet)
         db.session.commit()
     
     return user.wallets
@@ -156,15 +155,17 @@ def register():
             return render_template('register.html')
         
         # Create new user
-        user = User(username=username, email=email)
-        user.set_password(password)
+        new_user = User()
+        new_user.username = username
+        new_user.email = email
+        new_user.set_password(password)
         
-        db.session.add(user)
+        db.session.add(new_user)
         db.session.commit()
         
         # Log the user in
-        session['user_id'] = user.id
-        session['username'] = user.username
+        session['user_id'] = new_user.id
+        session['username'] = new_user.username
         
         # Redirect to wallet setup
         return redirect(url_for('wallets'))
@@ -252,36 +253,35 @@ def play_dice():
     payout = bet_amount * multiplier
     
     # Create bet record
-    bet = DiceBet(
-        user_id=session['user_id'],
-        bet_amount=bet_amount,
-        client_seed=client_seed,
-        server_seed=server_seed,
-        server_seed_hash=server_seed_hash,
-        rolled_number=rolled_number,
-        payout=payout,
-        currency=wallet.currency
-    )
+    new_bet = DiceBet()
+    new_bet.user_id = session['user_id']
+    new_bet.bet_amount = bet_amount
+    new_bet.client_seed = client_seed
+    new_bet.server_seed = server_seed
+    new_bet.server_seed_hash = server_seed_hash
+    new_bet.rolled_number = rolled_number
+    new_bet.payout = payout
+    new_bet.currency = wallet.currency
     
     # Update wallet balance
     wallet.balance -= bet_amount
     if is_win:
         wallet.balance += payout
     
-    db.session.add(bet)
+    db.session.add(new_bet)
     db.session.commit()
     
     return json.dumps({
         'bet': {
-            'id': bet.id,
-            'bet_amount': bet.bet_amount,
-            'client_seed': bet.client_seed,
-            'server_seed': bet.server_seed,
-            'server_seed_hash': bet.server_seed_hash,
-            'rolled_number': bet.rolled_number,
-            'payout': bet.payout,
-            'currency': bet.currency,
-            'created_at': bet.created_at.strftime('%H:%M:%S')
+            'id': new_bet.id,
+            'bet_amount': new_bet.bet_amount,
+            'client_seed': new_bet.client_seed,
+            'server_seed': new_bet.server_seed,
+            'server_seed_hash': new_bet.server_seed_hash,
+            'rolled_number': new_bet.rolled_number,
+            'payout': new_bet.payout,
+            'currency': new_bet.currency,
+            'created_at': new_bet.created_at.strftime('%H:%M:%S')
         },
         'wallet_balance': wallet.balance,
         'is_win': is_win
@@ -293,6 +293,9 @@ def kyc():
         return redirect(url_for('login'))
     
     user = User.query.get(session['user_id'])
+    if user is None:
+        return redirect(url_for('logout'))
+        
     documents = KycDocument.query.filter_by(user_id=user.id).all()
     
     return render_template('kyc.html', user=user, documents=documents)
@@ -317,27 +320,25 @@ with app.app_context():
     db.create_all()
     
     # Create admin user if it doesn't exist
-    admin = User.query.filter_by(email='admin@xaxino.com').first()
-    if not admin:
-        admin = User(
-            username='admin',
-            email='admin@xaxino.com',
-            role='admin',
-            kyc_status='verified'
-        )
-        admin.set_password('admin123')
-        db.session.add(admin)
+    existing_admin = User.query.filter_by(email='admin@xaxino.com').first()
+    if existing_admin is None:
+        admin_user = User()
+        admin_user.username = 'admin'
+        admin_user.email = 'admin@xaxino.com'
+        admin_user.role = 'admin'
+        admin_user.kyc_status = 'verified'
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
         
         # Create demo user
-        user = User.query.filter_by(email='user@example.com').first()
-        if not user:
-            user = User(
-                username='demouser',
-                email='user@example.com',
-                kyc_status='pending'
-            )
-            user.set_password('password123')
-            db.session.add(user)
+        existing_user = User.query.filter_by(email='user@example.com').first()
+        if existing_user is None:
+            demo_user = User()
+            demo_user.username = 'demouser'
+            demo_user.email = 'user@example.com'
+            demo_user.kyc_status = 'pending'
+            demo_user.set_password('password123')
+            db.session.add(demo_user)
         
         db.session.commit()
 
