@@ -6,6 +6,7 @@ use App\Http\Controllers\WalletController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SlotGameController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,15 +43,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/2fa/verify', [AuthController::class, 'verify2fa']);
     Route::get('/2fa/setup', [AuthController::class, 'show2faSetupForm'])->name('2fa.setup');
     Route::post('/2fa/complete', [AuthController::class, 'complete2faSetup'])->name('2fa.complete');
-    
+
     // User Profile
     Route::get('/profile', function() {
         return view('profile.index');
     })->name('profile');
-    
+
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    
+
     // Wallet Routes
     Route::prefix('wallets')->group(function () {
         Route::get('/', [WalletController::class, 'index'])->name('wallets.index');
@@ -61,7 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/withdraw/{currency}', [WalletController::class, 'withdraw'])->name('wallets.doWithdraw');
         Route::post('/demo-deposit/{currency}', [WalletController::class, 'demoDeposit'])->name('wallets.demoDeposit');
     });
-    
+
     // KYC Routes
     Route::prefix('kyc')->group(function () {
         Route::get('/', [KycController::class, 'showUploadForm'])->name('kyc.upload');
@@ -69,15 +70,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/status', [KycController::class, 'status'])->name('kyc.status');
         Route::delete('/{id}', [KycController::class, 'destroy'])->name('kyc.destroy');
     });
-    
+
     // Game Routes
     Route::prefix('games')->group(function () {
         Route::get('/dice', [GameController::class, 'showDice'])->name('games.dice');
         Route::post('/dice/play', [GameController::class, 'playDice'])->name('games.dice.play');
         Route::post('/dice/verify', [GameController::class, 'verifyDice'])->name('games.dice.verify');
         Route::get('/dice/recent-bets', [GameController::class, 'getRecentBets'])->name('games.dice.recentBets');
+
+        // Slots Game
+        Route::get('/slots', [SlotGameController::class, 'show'])->name('games.slots');
+        Route::post('/slots/spin', [SlotGameController::class, 'spin'])->name('games.slots.spin');
+        Route::get('/slots/verify/{betId}', [SlotGameController::class, 'verify'])->name('games.slots.verify');
     });
-    
+
     // Admin Routes
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -96,7 +102,7 @@ Route::middleware('auth')->group(function () {
 // Create Admin middleware
 Route::get('/create-admin-middleware', function() {
     $path = app_path('Http/Middleware/AdminMiddleware.php');
-    
+
     if (!file_exists($path)) {
         $middleware = <<<'EOT'
 <?php
@@ -126,11 +132,11 @@ class AdminMiddleware
     }
 }
 EOT;
-        
+
         file_put_contents($path, $middleware);
-        
+
         return "AdminMiddleware created successfully! Add to Kernel.php: 'admin' => \App\Http\Middleware\AdminMiddleware::class";
     }
-    
+
     return "AdminMiddleware already exists!";
 });

@@ -2,67 +2,112 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KYCDocument;
+use App\Models\KycDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
-class KYCController extends Controller
+class KycController extends Controller
 {
     /**
-     * Show KYC upload form
+     * Create a new controller instance.
      */
-    public function show()
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Show the KYC document upload form.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showUploadForm()
     {
         $user = Auth::user();
+        $kycDocuments = $user->kycDocuments;
         
-        // Get the user's current KYC documents
-        $documents = KYCDocument::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-            
-        return view('kyc.upload', [
-            'user' => $user,
-            'documents' => $documents
-        ]);
+        return view('kyc.upload', compact('kycDocuments'));
     }
-    
+
     /**
-     * Process document upload
+     * Upload a new KYC document.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function upload(Request $request)
     {
         $request->validate([
-            'document_type' => 'required|in:passport,drivers_license,id_card',
-            'document_image' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // Max 5MB
-            'document_number' => 'required|string|max:50'
+            'document_type' => 'required|in:id_card,passport,driving_license,utility_bill',
+            'document' => 'required|file|mimes:jpeg,png,pdf|max:5120', // 5MB max
         ]);
-        
+
         $user = Auth::user();
         
-        // If user is already verified, don't allow more uploads
-        if ($user->kyc_status === 'verified') {
-            return redirect()->route('kyc')->with('info', 'Your account is already verified.');
-        }
+        // Store the document
+        $path = $request->file('document')->store('kyc_documents/' . $user->id, 'public');
         
-        // Store the uploaded file
-        $documentPath = $request->file('document_image')->store('kyc_documents', 'private');
+        // Create a new KYC document record
+        $kycDocument = new KycDocument([
+            'user_id' => $user->id,
+            'document_type' => $request->document_type,
+            'document_path' => $path,
+            'status' => 'pending',
+        ]);
         
-        // Create new KYC document record
-        $document = new KYCDocument();
-        $document->user_id = $user->id;
-        $document->document_type = $request->document_type;
-        $document->document_path = $documentPath;
-        $document->document_number = $request->document_number;
-        $document->status = 'pending';
-        $document->save();
+        $kycDocument->save();
         
-        // Update user's KYC status to pending if it wasn't already
-        if ($user->kyc_status !== 'pending') {
+        // Update user's KYC status if it's not already verified
+        if ($user->kyc_status !== 'verified') {
             $user->kyc_status = 'pending';
             $user->save();
         }
         
-        return redirect()->route('kyc')->with('success', 'Document uploaded successfully. It will be reviewed soon.');
+        return back()->with('success', 'Your document has been uploaded successfully and is pending verification.');
+    }
+
+    /**
+     * Show the KYC status page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function status()
+    {
+        $user = Auth::user();
+        $kycDocuments = $user->kycDocuments;
+        
+        return view('kyc.status', compact('user', 'kycDocuments'));
+    }
+
+    /**
+     * Delete a KYC document.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $document = KycDocument::where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+        
+        // Only allow deletion if the document is not verified
+        if ($document->status === 'verified') {
+            return back()->withErrors([
+                'document' => 'Cannot delete a verified document.',
+            ]);
+        }
+        
+        // Delete the file
+        if (Storage::disk('public')->exists($document->document_path)) {
+            Storage::disk('public')->delete($document->document_path);
+        }
+        
+        // Delete the record
+        $document->delete();
+        
+        return back()->with('success', 'Document deleted successfully.');
     }
 }
