@@ -244,6 +244,16 @@ Run the application and database with Docker Compose:
 docker compose up --build
 ```
 
+### Heroku Deployment
+Deploy the web service to Heroku using the provided `Procfile`:
+```bash
+heroku create
+git push heroku work:main
+heroku addons:create heroku-postgresql:hobby-dev
+heroku config:set SESSION_SECRET=$(openssl rand -hex 16)
+heroku open
+```
+
 ### Production Setup
 1. Use PostgreSQL for production database
 2. Configure Redis for session storage
