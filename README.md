@@ -85,7 +85,7 @@ A comprehensive cryptocurrency casino platform featuring multiple games, wallet 
 
 6. **Run the application**
    ```bash
-   python main.py
+   ./run.sh
    ```
 
 ## 📁 Project Structure
@@ -236,9 +236,9 @@ python -m pytest --cov=app tests/
 ## 📦 Deployment
 
 ### Docker Deployment
+Run the application and database with Docker Compose:
 ```bash
-docker build -t xaxino-casino .
-docker run -p 5000:5000 xaxino-casino
+docker compose up --build
 ```
 
 ### Production Setup
