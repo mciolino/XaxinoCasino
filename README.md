@@ -233,6 +233,9 @@ python -m pytest tests/
 python -m pytest --cov=app tests/
 ```
 
+### Continuous Integration
+Unit tests run automatically via GitHub Actions whenever changes are pushed or a pull request is opened.
+
 ## 📦 Deployment
 
 ### Docker Deployment
